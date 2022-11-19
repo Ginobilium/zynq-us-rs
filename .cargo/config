@@ -1,0 +1,8 @@
+[target.aarch64-unknown-none]
+rustflags = [
+  "-C", "target-feature=a53,fp-armv8,neon",
+  "-C", "target-cpu=cortex-a53",
+]
+
+[build]
+target = "aarch64-unknown-none.json"
