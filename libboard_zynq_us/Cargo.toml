@@ -1,0 +1,17 @@
+[package]
+name = "libboard_zynq_us"
+description = "Drivers for peripherals in the Zynq UltraScale+ PS"
+version = "0.0.0"
+authors = ["bradbqc"]
+edition = "2018"
+
+[features]
+target_zcu111 = []
+ipv6 = []  # todo
+default = [ "target_zcu111" ]
+
+[dependencies]
+volatile-register = "0.2"
+bit_field = "0.10"
+log = "0.4"
+libregister = { git = "https://git.m-labs.hk/bradbqc/zynq-rs", branch = "feature/zcu111" }
