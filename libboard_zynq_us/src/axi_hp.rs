@@ -8,7 +8,7 @@
 
 use volatile_register::{RW, RO, WO};
 
-use libregister::{register, register_at, register_bit, register_bits, register_bits_typed};
+use libregister::{register, register_at, register_bit, register_bits_typed};
 
 
 #[repr(u8)]
@@ -54,22 +54,22 @@ register_at!(RegisterBlock, 0xFD3B_0000, s_axi_hp3_fpd);
 register_at!(RegisterBlock, 0xFF9B_0000, s_axi_lpd);
 
 register!(rdchan_ctrl, RdchanCtrl, RW, u32);
-/// Pause the issuing of new read commands to the PS-side. 
-/// Existing outstanding commands will continue to be processed.
+// Pause the issuing of new read commands to the PS-side. 
+// Existing outstanding commands will continue to be processed.
 register_bit!(rdchan_ctrl, pause, 3);
-/// Enable control of QoS from the fabric
+// Enable control of QoS from the fabric
 register_bit!(rdchan_ctrl, fabric_qos_en, 2);
-/// Configures the Read Channel Fabric interface width
+// Configures the Read Channel Fabric interface width
 register_bits_typed!(rdchan_ctrl, fabric_width, u8, FabricWidth, 0, 1);
 
 
 register!(wrchan_ctrl, WrchanCtrl, RW, u32);
-/// Mode of Write Command Release
+// Mode of Write Command Release
 register_bit!(wrchan_ctrl, wr_release_mode, 12);
-/// Pause the issuing of new write commands to the PS-side.
-/// Existing write commands will continue to be processed.
+// Pause the issuing of new write commands to the PS-side.
+// Existing write commands will continue to be processed.
 register_bit!(wrchan_ctrl, pause, 3);
-/// Enable control of QoS from the fabric
+// Enable control of QoS from the fabric
 register_bit!(wrchan_ctrl, fabric_qos_en, 2);
-/// Configures the Write Channel Fabric interface width
+// Configures the Write Channel Fabric interface width
 register_bits_typed!(wrchan_ctrl, fabric_width, u8, FabricWidth, 0, 1);
