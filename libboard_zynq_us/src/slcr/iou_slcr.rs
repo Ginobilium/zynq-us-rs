@@ -1,10 +1,6 @@
+use libregister::{register, register_at, register_bit, register_bits, RegisterRW};
 ///! IOU SLCR for MIO pin configuration
-
 use volatile_register::{RO, RW, WO};
-use libregister::{
-    register, register_at,
-    register_bit, register_bits, RegisterRW,
-};
 
 use super::common::Unlocked;
 
@@ -83,29 +79,28 @@ impl RegisterBlock {
     pub fn mio_pullup(&mut self, pin: u8, pullup: bool) {
         let bank = pin / NUM_BANKS;
         let idx = pin % bank;
-        self.bank_csr[bank as usize].bank_pull_ctrl.modify(|r, w|
-            w.pullup(r.pullup() | (u32::from(pullup) << idx))
-        );
+        self.bank_csr[bank as usize]
+            .bank_pull_ctrl
+            .modify(|r, w| w.pullup(r.pullup() | (u32::from(pullup) << idx)));
     }
 
     pub fn mio_pull_enable(&mut self, pin: u8, enable: bool) {
         let bank = pin / NUM_BANKS;
         let idx = pin % bank;
-        self.bank_csr[bank as usize].bank_pull_enable.modify(|r, w|
-            w.pull_enable(r.pull_enable() | (u32::from(enable) << idx))
-        );
+        self.bank_csr[bank as usize]
+            .bank_pull_enable
+            .modify(|r, w| w.pull_enable(r.pull_enable() | (u32::from(enable) << idx)));
     }
 
     pub fn mio_tri_enable(&mut self, pin: u8, enable: bool) {
         // because why organize register fields in a consistent way
         let bank = pin / 32;
         let idx = pin % 32;
-        self.mio_tri_enable[bank as usize].modify(|r, _|
-            mio_tri_enable::Write { inner: r.inner | (u32::from(enable) << idx) }
-        );
+        self.mio_tri_enable[bank as usize].modify(|r, _| mio_tri_enable::Write {
+            inner: r.inner | (u32::from(enable) << idx),
+        });
     }
 }
-
 
 register!(mio_pin, MioPin, RW, u32);
 register_bits!(mio_pin, l3_sel, u8, 5, 7);

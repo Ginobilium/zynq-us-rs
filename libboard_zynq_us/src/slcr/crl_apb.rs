@@ -1,12 +1,8 @@
+use libregister::{register, register_at, register_bit, register_bits, register_bits_typed};
 ///! LPD clock and reset control
-
 use volatile_register::{RO, RW, WO};
-use libregister::{
-    register, register_at,
-    register_bit, register_bits, register_bits_typed,
-};
 
-use super::common::{Unlocked, WProt, PllCfg, PllCtrl, PllFracCfg};
+use super::common::{PllCfg, PllCtrl, PllFracCfg, Unlocked, WProt};
 
 /// Clock source selection for IO-type devices
 #[repr(u8)]
@@ -27,7 +23,7 @@ pub enum RpuClkSource {
 #[repr(C)]
 pub struct RegisterBlock {
     pub err_ctrl: RW<u32>,
-    pub ir_status: RW<u32>,  // todo: WTC LSB
+    pub ir_status: RW<u32>, // todo: WTC LSB
     pub ir_mask: RO<u32>,
     pub ir_enable: WO<u32>,
     pub ir_disable: WO<u32>,
@@ -139,7 +135,7 @@ pub struct RegisterBlock {
     unused13: [u32; 4],
     pub reset_ctrl: RW<u32>,
     pub blockonly_rst: RW<u32>, // todo: WTC LSB
-    pub reset_reason: RW<u32>, // todo: WTC 0:6
+    pub reset_reason: RW<u32>,  // todo: WTC 0:6
     unused14: [u32; 3],
     pub gem_rst_ctrl: GemRstCtrl,
     unused15: [u32; 1],
@@ -147,7 +143,7 @@ pub struct RegisterBlock {
     pub rst_lpd_top: RstLpdTop,
     pub rst_lpd_dbg: RW<u32>,
     unused16: [u32; 3],
-    pub boot_pin_ctrl: RW<u32>,  // todo: RO 4:7
+    pub boot_pin_ctrl: RW<u32>, // todo: RO 4:7
     unused17: [u32; 7],
     pub bank3_drive0: RW<u32>,
     pub bank3_drive1: RW<u32>,
@@ -173,7 +169,6 @@ register_bit!(pll_status, io_pll_stable, 3);
 register_bit!(pll_status, rpu_pll_lock, 1);
 register_bit!(pll_status, io_pll_lock, 0);
 
-
 register!(pll_to_fpd_ctrl, PllToFpdCtrl, RW, u32);
 register_bits!(pll_to_fpd_ctrl, divisor0, u8, 8, 13);
 
@@ -184,13 +179,11 @@ register_bits!(gem_clk_ctrl, divisor1, u8, 16, 21);
 register_bits!(gem_clk_ctrl, divisor0, u8, 8, 13);
 register_bits_typed!(gem_clk_ctrl, srcsel, u8, IoClkSource, 0, 2);
 
-
 register!(usb_clk_ctrl, UsbClkCtrl, RW, u32);
 register_bit!(usb_clk_ctrl, clkact, 25);
 register_bits!(usb_clk_ctrl, divisor1, u8, 16, 21);
 register_bits!(usb_clk_ctrl, divisor0, u8, 8, 13);
 register_bits_typed!(usb_clk_ctrl, srcsel, u8, IoClkSource, 0, 2);
-
 
 macro_rules! dual_div_clk_reg {
     ($mod_name: ident, $struct_name: ident, $srcsel_type: ident) => {
@@ -213,13 +206,11 @@ dual_div_clk_reg!(gem_tsu_clk_ctrl, GemTsuClkCtrl, IoClkSource);
 dual_div_clk_reg!(ps_sysmon_clk_ctrl, PsSysmonClkCtrl, RpuClkSource);
 dual_div_clk_reg!(i2c_clk_ctrl, I2cClkCtrl, IoClkSource);
 
-
 register!(rpu_clk_ctrl, RpuClkCtrl, RW, u32);
 register_bit!(rpu_clk_ctrl, clkact_core, 25);
 register_bit!(rpu_clk_ctrl, clkact, 24);
 register_bits!(rpu_clk_ctrl, divisor0, u8, 8, 13);
 register_bits_typed!(rpu_clk_ctrl, srcsel, u8, RpuClkSource, 0, 2);
-
 
 macro_rules! single_div_clk_reg {
     // default to RpuClkSource
@@ -242,17 +233,14 @@ single_div_clk_reg!(lpd_dma_clk_ctrl, LpdDmaClkCtrl, RpuClkSource);
 // todo: timestamp clk can also run directly from PS_REF_CLK (0b1xx)
 single_div_clk_reg!(timestamp_clk_ctrl, TimestampClkCtrl, IoClkSource);
 
-
 register!(pl_thr_ctrl, PlThrCtrl, RW, u32);
 register_bits!(pl_thr_ctrl, curr_val, u16, 16, 31, RO);
 register_bit!(pl_thr_ctrl, running, 15, RO);
 register_bit!(pl_thr_ctrl, cpu_start, 1);
 register_bit!(pl_thr_ctrl, cnt_rst, 0);
 
-
 register!(pl_thr_cnt, PlThrCnt, RW, u32);
 register_bits!(pl_thr_cnt, last_cnt, u16, 0, 15);
-
 
 register!(dll_clk_ctrl, DllClkCtrl, RW, u32);
 register_bits!(dll_clk_ctrl, srcsel, u8, 0, 2);
@@ -263,13 +251,11 @@ register_bits!(boot_mode, boot_mode2, u8, 8, 11);
 register_bits!(boot_mode, boot_mode1, u8, 4, 7);
 register_bits!(boot_mode, boot_mode0, u8, 0, 3);
 
-
 register!(gem_rst_ctrl, GemRstCtrl, RW, u32);
 register_bit!(gem_rst_ctrl, gem3_rst, 3);
 register_bit!(gem_rst_ctrl, gem2_rst, 2);
 register_bit!(gem_rst_ctrl, gem1_rst, 1);
 register_bit!(gem_rst_ctrl, gem0_rst, 0);
-
 
 register!(peri_rst_ctrl, PeriRstCtrl, RW, u32);
 register_bit!(peri_rst_ctrl, timestamp_rst, 20);
@@ -293,7 +279,6 @@ register_bit!(peri_rst_ctrl, spi0_rst, 3);
 register_bit!(peri_rst_ctrl, uart1_rst, 2);
 register_bit!(peri_rst_ctrl, uart0_rst, 1);
 register_bit!(peri_rst_ctrl, qspi_rst, 0);
-
 
 register!(rst_lpd_top, RstLpdTop, RW, u32);
 register_bit!(rst_lpd_top, fpd_rst, 23);

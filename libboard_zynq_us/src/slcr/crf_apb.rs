@@ -1,13 +1,10 @@
-///! FPD clock and reset control
-
-use volatile_register::{RO, RW, WO};
 use libregister::{
-    register, register_at,
-    register_bit, register_bits, register_bits_typed,
-    RegisterW,
+    register, register_at, register_bit, register_bits, register_bits_typed, RegisterW,
 };
+///! FPD clock and reset control
+use volatile_register::{RO, RW, WO};
 
-use super::common::{Unlocked, WProt, PllCfg, PllCtrl, PllFracCfg};
+use super::common::{PllCfg, PllCtrl, PllFracCfg, Unlocked, WProt};
 
 #[repr(u8)]
 pub enum ApuClkSource {
@@ -19,7 +16,7 @@ pub enum ApuClkSource {
 pub struct RegisterBlock {
     // CRF_APB
     pub err_ctrl: RW<u32>,
-    pub ir_status: RW<u32>,  // todo: WTC LSB
+    pub ir_status: RW<u32>, // todo: WTC LSB
     pub ir_mask: RO<u32>,
     pub ir_enable: WO<u32>,
     pub ir_disable: WO<u32>,
@@ -74,7 +71,6 @@ impl Unlocked for RegisterBlock {
         r
     }
 }
-
 
 register!(pll_status, PllStatus, RO, u32);
 register_bit!(pll_status, video_pll_stable, 5);

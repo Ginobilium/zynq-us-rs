@@ -1,5 +1,5 @@
-use volatile_register::{RW, RO};
 use libregister::{register, register_at, register_bit, register_bits, register_bits_typed};
+use volatile_register::{RO, RW};
 
 #[allow(unused)]
 #[repr(u8)]

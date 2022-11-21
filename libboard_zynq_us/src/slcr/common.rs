@@ -1,5 +1,4 @@
 ///! Type definitions for re-use across SLCR blocks
-
 use libregister::{register, register_bit, register_bits};
 
 pub trait Unlocked {
