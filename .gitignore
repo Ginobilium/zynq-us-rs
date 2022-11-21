@@ -1,0 +1,4 @@
+# cargo build products
+target
+# nix build products
+result*
