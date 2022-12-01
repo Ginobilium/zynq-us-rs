@@ -1,6 +1,7 @@
 [target.aarch64-unknown-none]
 rustflags = [
-  "-C", "target-feature=a53,fp-armv8,neon",
+  "-C", "link-arg=-Tlink.x",
+  "-C", "target-feature=a53,fp-armv8,neon,strict-align",
   "-C", "target-cpu=cortex-a53",
 ]
 

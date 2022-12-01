@@ -12,7 +12,7 @@
   "emit-debug-gdb-scripts": false,
   "env": "",
   "executables": true,
-  "features": "+fp-armv8,+neon",
+  "features": "+strict-align,+fp-armv8,+neon",
   "is-builtin": false,
   "linker": "rust-lld",
   "linker-flavor": "ld.lld",
