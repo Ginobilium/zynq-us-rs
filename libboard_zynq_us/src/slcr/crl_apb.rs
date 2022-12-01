@@ -133,7 +133,7 @@ pub struct RegisterBlock {
     pub boot_mode_user: RW<u32>,
     pub boot_mode: BootMode,
     unused13: [u32; 4],
-    pub reset_ctrl: RW<u32>,
+    pub reset_ctrl: ResetCtrl,
     pub blockonly_rst: RW<u32>, // todo: WTC LSB
     pub reset_reason: RW<u32>,  // todo: WTC 0:6
     unused14: [u32; 3],
@@ -250,6 +250,9 @@ register!(boot_mode, BootMode, RO, u32);
 register_bits!(boot_mode, boot_mode2, u8, 8, 11);
 register_bits!(boot_mode, boot_mode1, u8, 4, 7);
 register_bits!(boot_mode, boot_mode0, u8, 0, 3);
+
+register!(reset_ctrl, ResetCtrl, RW, u32);
+register_bit!(reset_ctrl, soft_reset, 4);
 
 register!(gem_rst_ctrl, GemRstCtrl, RW, u32);
 register_bit!(gem_rst_ctrl, gem3_rst, 3);
