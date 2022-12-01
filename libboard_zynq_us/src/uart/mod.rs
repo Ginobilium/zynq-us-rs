@@ -3,6 +3,7 @@
 // File: libboard_zynq/src/uart/baud_rate_gen.rs
 // Original authors: Astro, Harry Ho, Sebastien Bourdeauducq
 // Modifications made for different MIO pins and SLCRs
+use core::fmt;
 
 use libregister::{RegisterR, RegisterRW, RegisterW};
 
@@ -169,5 +170,15 @@ impl Uart {
     pub fn tx_idle(&self) -> bool {
         let status = self.regs.channel_sts.read();
         status.txempty() && !status.tactive()
+    }
+}
+
+impl fmt::Write for Uart {
+    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+        while !self.tx_idle() {}
+        for b in s.bytes() {
+            self.write_byte(b);
+        }
+        Ok(())
     }
 }
