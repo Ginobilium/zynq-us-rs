@@ -1,0 +1,20 @@
+[package]
+name = "test"
+description = "Zynq UltraScale+ hardware tests"
+version = "0.0.0"
+authors = ["bradbqc"]
+edition = "2018"
+
+[features]
+target_zcu111 = [ "libboard_zynq_us/target_zcu111" ]
+default = [ "target_zcu111" ]
+
+[dependencies]
+libboard_zynq_us = { path = "../libboard_zynq_us" }
+libcortex_a53 = { path = "../libcortex_a53" }
+volatile-register = "0.2"
+bit_field = "0.10"
+log = "0.4"
+r0 = "0.2"
+panic-abort = "0.3"
+libregister = { git = "https://git.m-labs.hk/bradbqc/zynq-rs", branch = "feature/zcu111" }

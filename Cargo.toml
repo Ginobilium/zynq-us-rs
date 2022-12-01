@@ -2,5 +2,5 @@
 members = [
   "libcortex_a53",
   "libboard_zynq_us",
+  "test",
 ]
-
