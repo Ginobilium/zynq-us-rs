@@ -23,6 +23,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "libcortex_a53"
+version = "0.0.0"
+dependencies = [
+ "bit_field",
+ "libregister",
+ "volatile-register",
+]
+
+[[package]]
 name = "libregister"
 version = "0.0.0"
 source = "git+https://git.m-labs.hk/bradbqc/zynq-rs?branch=feature/zcu111#188954ddc7d644c59598edfb650381976a546eef"

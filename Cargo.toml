@@ -1,5 +1,6 @@
 [workspace]
 members = [
-  "libboard_zynq_us"
+  "libcortex_a53",
+  "libboard_zynq_us",
 ]
 

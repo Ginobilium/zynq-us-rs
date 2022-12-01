@@ -1,0 +1,14 @@
+[package]
+name = "libcortex_a53"
+description = "ARM Cortex-A53 support"
+version = "0.0.0"
+authors = ["bradbqc"]
+edition = "2018"
+
+[features]
+default = [ ]
+
+[dependencies]
+volatile-register = "0.2"
+bit_field = "0.10"
+libregister = { git = "https://git.m-labs.hk/bradbqc/zynq-rs", branch = "feature/zcu111" }
