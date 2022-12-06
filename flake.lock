@@ -1,5 +1,44 @@
 {
   "nodes": {
+    "binutils-src": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-ksj3VaJMrb82zUgEVSHW/agX4X8q9hgUrywHCNz9ENk=",
+        "type": "tarball",
+        "url": "https://ftp.gnu.org/gnu/binutils/binutils-2.39.tar.bz2"
+      },
+      "original": {
+        "narHash": "sha256-ksj3VaJMrb82zUgEVSHW/agX4X8q9hgUrywHCNz9ENk=",
+        "type": "tarball",
+        "url": "https://ftp.gnu.org/gnu/binutils/binutils-2.39.tar.bz2"
+      }
+    },
+    "gcc-src": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-u1AF7a7xtXdepsfbvw2+501EF88rOFVMOZX3DUFf/9I=",
+        "type": "tarball",
+        "url": "https://ftp.gnu.org/gnu/gcc/gcc-12.2.0/gcc-12.2.0.tar.xz"
+      },
+      "original": {
+        "narHash": "sha256-u1AF7a7xtXdepsfbvw2+501EF88rOFVMOZX3DUFf/9I=",
+        "type": "tarball",
+        "url": "https://ftp.gnu.org/gnu/gcc/gcc-12.2.0/gcc-12.2.0.tar.xz"
+      }
+    },
+    "gdb-src": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-tyR2yqsOQupCC3csq0W41vntPhjJ0Wqx//8O0veE1M4=",
+        "type": "tarball",
+        "url": "https://ftp.gnu.org/gnu/gdb/gdb-12.1.tar.xz"
+      },
+      "original": {
+        "narHash": "sha256-tyR2yqsOQupCC3csq0W41vntPhjJ0Wqx//8O0veE1M4=",
+        "type": "tarball",
+        "url": "https://ftp.gnu.org/gnu/gdb/gdb-12.1.tar.xz"
+      }
+    },
     "mozilla-overlay": {
       "flake": false,
       "locked": {
@@ -14,6 +53,19 @@
         "owner": "mozilla",
         "repo": "nixpkgs-mozilla",
         "type": "github"
+      }
+    },
+    "newlib-src": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-nJtCMMkSPoWnS5CTvlOalydfCMk906Oq4bUT37sl99I=",
+        "type": "tarball",
+        "url": "ftp://sourceware.org/pub/newlib/newlib-4.2.0.20211231.tar.gz"
+      },
+      "original": {
+        "narHash": "sha256-nJtCMMkSPoWnS5CTvlOalydfCMk906Oq4bUT37sl99I=",
+        "type": "tarball",
+        "url": "ftp://sourceware.org/pub/newlib/newlib-4.2.0.20211231.tar.gz"
       }
     },
     "nixpkgs": {
@@ -32,16 +84,51 @@
         "type": "github"
       }
     },
+    "nixpkgs-unstable": {
+      "locked": {
+        "lastModified": 1670148586,
+        "narHash": "sha256-EcDfOiTHs0UBAtyGc0wxJJdhcMjrJEgWXjJutxZGA3E=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a2d2f70b82ada0eadbcb1df2bca32d841a3c1bf1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "openocd-src": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-xwi6Y7aglrLo0p1TAwCGU+ApNgNRXnJcffrWZc5RdwE=",
+        "type": "tarball",
+        "url": "https://sourceforge.net/projects/openocd/files/openocd/0.12.0-rc2/openocd-0.12.0-rc2.tar.bz2"
+      },
+      "original": {
+        "narHash": "sha256-xwi6Y7aglrLo0p1TAwCGU+ApNgNRXnJcffrWZc5RdwE=",
+        "type": "tarball",
+        "url": "https://sourceforge.net/projects/openocd/files/openocd/0.12.0-rc2/openocd-0.12.0-rc2.tar.bz2"
+      }
+    },
     "root": {
       "inputs": {
+        "binutils-src": "binutils-src",
+        "gcc-src": "gcc-src",
+        "gdb-src": "gdb-src",
         "mozilla-overlay": [
           "zynq-rs",
           "mozilla-overlay"
         ],
+        "newlib-src": "newlib-src",
         "nixpkgs": [
           "zynq-rs",
           "nixpkgs"
         ],
+        "nixpkgs-unstable": "nixpkgs-unstable",
+        "openocd-src": "openocd-src",
         "zynq-rs": "zynq-rs"
       }
     },
