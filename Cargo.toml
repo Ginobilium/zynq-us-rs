@@ -4,3 +4,7 @@ members = [
   "libboard_zynq_us",
   "test",
 ]
+
+[profile.dev]
+opt-level = 0
+debug = true
