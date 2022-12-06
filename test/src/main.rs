@@ -20,6 +20,7 @@ use panic_abort as _;
 use r0::zero_bss;
 
 use libboard_zynq_us::{
+    clocks::{self, source::ClockSource},
     uart,
 };
 use libcortex_a53::{
@@ -72,6 +73,10 @@ fn cache_init() {
 }
 
 fn main() {
+    clocks::source::IoPll::setup(1_000_000_000);
     let mut uart = uart::Uart::uart0(115_200);
-    write!(uart, "Hello, world!\r\n");
+    write!(uart, "Hello, world!\r\n").unwrap();
+    loop {
+        asm::nop();
+    }
 }
