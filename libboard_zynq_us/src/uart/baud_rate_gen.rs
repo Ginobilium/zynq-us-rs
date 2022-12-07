@@ -37,6 +37,7 @@ pub fn configure(regs: &mut RegisterBlock, mut clk: u32, baud: u32) {
             .map(|(_cd, _bdiv, best_error)| error < best_error)
             .unwrap_or(true);
         if better {
+            // FIXME: failure on this line, maybe b/c no heap?
             best = Some((cd as u16, bdiv as u8, error));
         }
     }

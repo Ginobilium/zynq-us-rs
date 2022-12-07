@@ -7,10 +7,12 @@ use core::fmt;
 
 use libregister::{RegisterR, RegisterRW, RegisterW};
 
+use self::regs::{BaudRateDiv, BaudRateGen};
+
 use super::clocks::Clocks;
 use super::slcr::{common::Unlocked, crl_apb};
 
-mod baud_rate_gen;
+// mod baud_rate_gen;
 mod regs;
 
 pub struct Uart {
@@ -30,7 +32,8 @@ impl Uart {
         let mut self_ = Uart {
             regs: regs::RegisterBlock::uart0(),
         };
-        self_.configure(baudrate);
+        let ref_clk = Clocks::get().uart0_ref_clk();
+        self_.configure(baudrate, ref_clk);
         self_
     }
 
@@ -46,7 +49,8 @@ impl Uart {
         let mut self_ = Uart {
             regs: regs::RegisterBlock::uart1(),
         };
-        self_.configure(baudrate);
+        let ref_clk = Clocks::get().uart1_ref_clk();
+        self_.configure(baudrate, ref_clk);
         self_
     }
 
@@ -55,10 +59,24 @@ impl Uart {
 
         self.regs
             .tx_rx_fifo
-            .write(regs::TxRxFifo::zeroed().data(value.into()));
+            .write(regs::TxRxFifo::zeroed().data(value));
     }
 
-    pub fn configure(&mut self, baudrate: u32) {
+    pub fn configure(&mut self, baudrate: u32, ref_clk: u32) {
+        // Disable everything
+        self.disable_interrupts();
+        self.disable_rx();
+        self.disable_tx();
+
+        // Reset
+        self.reset_rx();
+        self.reset_tx();
+        self.wait_reset();
+
+        // Clear any remaining interrupt status flags
+        self.clear_interrupt_status();
+        self.clear_modem_status();
+
         // Configure UART character frame
         // * Disable clock-divider
         // * 8-bit
@@ -67,25 +85,38 @@ impl Uart {
         // * No parity
         self.regs.mode.write(
             regs::Mode::zeroed()
+                .clks(false)
+                .chrl(regs::CharacterLength::Eight)
                 .par(regs::ParityMode::None)
-                .chmode(regs::ChannelMode::Normal),
+                .nbstop(regs::StopBits::One)
+                .chmode(regs::ChannelMode::Normal)
+                .wsize(0b01),
         );
 
-        // Configure the Baud Rate
-        self.disable_rx();
-        self.disable_tx();
+        // Don't think trigger levels matter since all interrupts are disabled,
+        // leaving this here just in case it becomes relevant.
+        // self.regs
+        //     .rcvr_fifo_trigger_level
+        //     .write(regs::FifoTriggerLevel::zeroed().level(1));
+        // self.regs
+        //     .tx_fifo_trigger_level
+        //     .write(regs::FifoTriggerLevel::zeroed().level(1));
 
-        let clocks = Clocks::get();
-        baud_rate_gen::configure(self.regs, clocks.uart0_ref_clk(), baudrate);
+        // Disable RX timeout
+        self.set_rx_timeout(0);
+
+        // Configure the Baud Rate
+        // hardcoded for ref clock = 50 MHz
+        // to give baud rate of 115200
+        self.regs.baud_rate_gen.write(BaudRateGen::zeroed().cd(62));
+        self.regs
+            .baud_rate_divider
+            .write(BaudRateDiv::zeroed().bdiv(6));
+        // baud_rate_gen::configure(self.regs, ref_clk, baudrate);
 
         // Enable controller
-        self.reset_rx();
-        self.reset_tx();
-        self.wait_reset();
         self.enable_rx();
         self.enable_tx();
-
-        self.set_rx_timeout(false);
         self.set_break(false, true);
     }
 
