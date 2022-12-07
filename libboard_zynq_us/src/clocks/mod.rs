@@ -4,7 +4,7 @@
 // Original authors: Astro, Harry Ho, pca006132
 // Modifications made for different clock sources, PLL configuration, and SLCRs
 
-pub use super::slcr::crf_apb::ApuClkSource;
+use super::slcr::crf_apb::ApuClkSource;
 use super::slcr::{common::Unlocked, crf_apb, crl_apb};
 use libregister::{RegisterR, RegisterRW};
 
