@@ -1,4 +1,6 @@
-use libregister::{register, register_at, register_bit, register_bits, register_bits_typed};
+use libregister::{
+    register, register_at, register_bit, register_bits, register_bits_typed, RegisterRW, RegisterW,
+};
 ///! LPD clock and reset control
 use volatile_register::{RO, RW, WO};
 
@@ -156,10 +158,12 @@ pub struct RegisterBlock {
 register_at!(RegisterBlock, 0xFF5E_0000, slcr);
 
 impl Unlocked for RegisterBlock {
-    // Dummy definition (CRL_APB has no WProt) for consistency with CRF_APB
     fn unlocked<F: FnMut(&mut Self) -> R, R>(mut f: F) -> R {
         let mut self_ = Self::slcr();
-        f(&mut self_)
+        self_.crl_wprot.write(WProt::zeroed().active(false));
+        let r = f(&mut self_);
+        self_.crl_wprot.write(WProt::zeroed().active(true));
+        r
     }
 }
 
