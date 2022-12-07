@@ -19,7 +19,7 @@ pub enum MioDriveSelect {
 pub struct RegisterBlock {
     pub mio_pin: [MioPin; NUM_MIO_PINS],
     pub bank_csr: [BankCSR; NUM_BANKS],
-    unused1: [u32; 5],
+    unused1: [u32; 29],
     pub mio_loopback: RW<u32>,
     pub mio_tri_enable: [MioTriEnable; NUM_BANKS],
     pub wdt_clk_sel: RW<u32>, // 0 = internal APB clock, 1 = external
