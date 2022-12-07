@@ -1,19 +1,27 @@
-use libregister::{register, register_at, register_bit, register_bits, RegisterRW};
 ///! IOU SLCR for MIO pin configuration
+use libregister::{register, register_at, register_bit, register_bits, RegisterW};
 use volatile_register::{RO, RW, WO};
 
 use super::common::Unlocked;
 
-pub const NUM_MIO_PINS: u8 = 78;
-pub const NUM_BANKS: u8 = 3;
+pub const NUM_MIO_PINS: usize = 78;
+pub const NUM_BANKS: usize = 3;
+
+#[allow(unused)]
+pub enum MioDriveSelect {
+    TwoMilliAmp = 0b00,
+    FourMilliAmp = 0b01,
+    EigthMilliAmp = 0b10,
+    TwelveMilliAmp = 0b11,
+}
 
 #[repr(C)]
 pub struct RegisterBlock {
-    pub mio_pin: [MioPin; NUM_MIO_PINS as usize],
-    pub bank_csr: [BankCSR; NUM_BANKS as usize],
+    pub mio_pin: [MioPin; NUM_MIO_PINS],
+    pub bank_csr: [BankCSR; NUM_BANKS],
     unused1: [u32; 5],
     pub mio_loopback: RW<u32>,
-    pub mio_tri_enable: [MioTriEnable; NUM_BANKS as usize],
+    pub mio_tri_enable: [MioTriEnable; NUM_BANKS],
     pub wdt_clk_sel: RW<u32>, // 0 = internal APB clock, 1 = external
     pub can_mio_ctrl: RW<u32>,
     pub gem_clk_ctrl: RW<u32>,
@@ -76,29 +84,40 @@ impl Unlocked for RegisterBlock {
 }
 
 impl RegisterBlock {
-    pub fn mio_pullup(&mut self, pin: u8, pullup: bool) {
-        let bank = pin / NUM_BANKS;
-        let idx = pin % bank;
-        self.bank_csr[bank as usize]
-            .bank_pull_ctrl
-            .modify(|r, w| w.pullup(r.pullup() | (u32::from(pullup) << idx)));
-    }
+    /// Set up muxes, pull-ups, etc. according to target pin assignments
+    pub fn mio_init(&mut self) {
+        for pin in 0..NUM_MIO_PINS {
+            let mio_sel = MIO_SEL[pin];
+            // in retrospect it would have made a lot more sense to reverse the tuple order
+            self.mio_pin[pin].write(
+                MioPin::zeroed()
+                    .l3_sel(mio_sel.0)
+                    .l2_sel(mio_sel.1)
+                    .l1_sel(mio_sel.2)
+                    .l0_sel(mio_sel.3),
+            );
+        }
+        for bank in 0..NUM_BANKS {
+            let bank_csr = &mut self.bank_csr[bank];
+            for i in 0..2 {
+                bank_csr.bank_drive_ctrl[i]
+                    .write(BankDriveCtrl::zeroed().drive(BANK_DRIVE_CTRL[bank][i]));
+            }
+            bank_csr
+                .bank_input_ctrl
+                .write(BankInputCtrl::zeroed().schmitt(BANK_INPUT_CTRL[bank]));
+            bank_csr
+                .bank_pull_ctrl
+                .write(BankPullCtrl::zeroed().pullup(BANK_PULL_CTRL[bank]));
+            bank_csr
+                .bank_pull_enable
+                .write(BankPullEnable::zeroed().pull_enable(BANK_PULL_ENABLE[bank]));
+            bank_csr
+                .bank_slew_ctrl
+                .write(BankSlewCtrl::zeroed().slow_slew(BANK_SLEW_CTRL[bank]));
 
-    pub fn mio_pull_enable(&mut self, pin: u8, enable: bool) {
-        let bank = pin / NUM_BANKS;
-        let idx = pin % bank;
-        self.bank_csr[bank as usize]
-            .bank_pull_enable
-            .modify(|r, w| w.pull_enable(r.pull_enable() | (u32::from(enable) << idx)));
-    }
-
-    pub fn mio_tri_enable(&mut self, pin: u8, enable: bool) {
-        // because why organize register fields in a consistent way
-        let bank = pin / 32;
-        let idx = pin % 32;
-        self.mio_tri_enable[bank as usize].modify(|r, _| mio_tri_enable::Write {
-            inner: r.inner | (u32::from(enable) << idx),
-        });
+            self.mio_tri_enable[bank].write(MioTriEnable::zeroed().enable(MIO_TRI_ENABLE[bank]));
+        }
     }
 }
 
@@ -131,3 +150,125 @@ register!(bank_status, BankStatus, RO, u32);
 register_bit!(bank_status, voltage_mode, 0);
 
 register!(mio_tri_enable, MioTriEnable, RW, u32);
+register_bits!(mio_tri_enable, enable, u32, 0, 31);
+
+// Target-specific constants
+// (L3_SEL, L2_SEL, L1_SEL, L0_SEL)
+#[cfg(feature = "target_zcu111")]
+const MIO_SEL: [(u8, u8, bool, bool); NUM_MIO_PINS] = [
+    (0, 0, false, true), // 0: QSPI
+    (0, 0, false, true), // 1: QSPI
+    (0, 0, false, true), // 2: QSPI
+    (0, 0, false, true), // 3: QSPI
+    (0, 0, false, true), // 4: QSPI
+    (0, 0, false, true), // 5: QSPI
+    // TODO: UG1271 says 6 is NC
+    (0, 0, false, true),  // 6: QSPI
+    (0, 0, false, true),  // 7: QSPI
+    (0, 0, false, true),  // 8: QSPI
+    (0, 0, false, true),  // 9: QSPI
+    (0, 0, false, true),  // 10: QSPI
+    (0, 0, false, true),  // 11: QSPI
+    (0, 0, false, true),  // 12: QSPI
+    (0, 0, false, false), // 13: GPIO
+    (2, 0, false, false), // 14: I2C0 SCL
+    (2, 0, false, false), // 15: I2C0 SDA
+    (2, 0, false, false), // 16: I2C1 SCL
+    (2, 0, false, false), // 17: I2C1 SDA
+    (6, 0, false, false), // 18: UART0 RXD
+    (6, 0, false, false), // 19: UART0 TXD
+    (0, 0, false, false), // 20: NC
+    (0, 0, false, false), // 21: NC
+    (0, 0, false, false), // 22: GPIO
+    (0, 0, false, false), // 23: GPIO
+    (0, 0, false, false), // 24: NC
+    (0, 0, false, false), // 25: NC
+    // TODO: FSBL has 26 as all zeros but pmu in is l2_sel = 1
+    (0, 0, false, false), // 26: PMU IN
+    (0, 3, false, false), // 27: DP AUX
+    (0, 3, false, false), // 28: DP AUX
+    (0, 3, false, false), // 29: DP AUX
+    (0, 3, false, false), // 30: DP AUX
+    (0, 0, false, false), // 31: NC
+    (0, 1, false, false), // 32: PMU OUT
+    (0, 1, false, false), // 33: PMU OUT
+    // TODO: pins 34-37 are just skipped in the FSBL
+    (0, 1, false, false), // 34: PMU OUT
+    (0, 1, false, false), // 35: PMU OUT
+    (0, 1, false, false), // 36: PMU OUT
+    (0, 1, false, false), // 37: PMU OUT
+    (0, 0, false, false), // 38: GPIO
+    (0, 2, false, false), // 39: SD1 data in/out[4]
+    (0, 2, false, false), // 40: SD1 data in/out[5]
+    (0, 2, false, false), // 41: SD1 data in/out[6]
+    (0, 2, false, false), // 42: SD1 data in/out[7]
+    (0, 0, false, false), // 43: NC
+    (0, 0, false, false), // 44: NC
+    (0, 2, false, false), // 45: SD1 CDn
+    (0, 2, false, false), // 46: SD1 data in/out[0]
+    (0, 2, false, false), // 47: SD1 data in/out[1]
+    (0, 2, false, false), // 48: SD1 data in/out[2]
+    (0, 2, false, false), // 49: SD1 data in/out[3]
+    (0, 2, false, false), // 50: SD1 cmd in/out
+    (0, 2, false, false), // 51: SD1 clk out
+    (0, 0, true, false),  // 52: USB0 clk in
+    (0, 0, true, false),  // 53: USB0 dir
+    (0, 0, true, false),  // 54: USB0 data[2]
+    (0, 0, true, false),  // 55: USB0 nxt
+    (0, 0, true, false),  // 56: USB0 data[0]
+    (0, 0, true, false),  // 57: USB0 data[1]
+    (0, 0, true, false),  // 58: USB0 stop
+    (0, 0, true, false),  // 59: USB0 data[3]
+    (0, 0, true, false),  // 60: USB0 data[4]
+    (0, 0, true, false),  // 61: USB0 data[5]
+    (0, 0, true, false),  // 62: USB0 data[6]
+    (0, 0, true, false),  // 63: USB0 data[7]
+    (0, 0, false, true),  // 64: GEM3 tx clk
+    (0, 0, false, true),  // 65: GEM3 txd[0]
+    (0, 0, false, true),  // 66: GEM3 txd[1]
+    (0, 0, false, true),  // 67: GEM3 txd[2]
+    (0, 0, false, true),  // 68: GEM3 txd[3]
+    (0, 0, false, true),  // 69: GEM3 tx ctl
+    (0, 0, false, true),  // 70: GEM3 rx clk
+    (0, 0, false, true),  // 71: GEM3 rxd[0]
+    (0, 0, false, true),  // 72: GEM3 rxd[1]
+    (0, 0, false, true),  // 73: GEM3 rxd[2]
+    (0, 0, false, true),  // 74: GEM3 rxd[3]
+    (0, 0, false, true),  // 75: GEM3 rx ctl
+    (6, 0, false, false), // 76: MDIO3 clk
+    (6, 0, false, false), // 77: MDIO3 data
+];
+
+#[cfg(feature = "target_zcu111")]
+const MIO_TRI_ENABLE: [u32; NUM_BANKS] = [
+    // Tri-state enable for pins 0-31
+    (1 << 18) | (1 << 28) | (1 << 30),
+    // Tri-state enable for pins 32-63
+    (1 << (45 - 32)) | (1 << (52 - 32)) | (1 << (53 - 32)) | (1 << (55 - 32)),
+    // Tri-state enable for pins 64-77
+    (1 << (70 - 64))
+        | (1 << (71 - 64))
+        | (1 << (72 - 64))
+        | (1 << (73 - 64))
+        | (1 << (74 - 64))
+        | (1 << (75 - 64)),
+];
+
+#[cfg(feature = "target_zcu111")]
+const BANK_DRIVE_CTRL: [[u32; 2]; NUM_BANKS] = [
+    [0x03FFFFFF, 0x03FFFFFF],
+    [0x03FFFFFF, 0x03FFFFFF],
+    [0x03FFFFFF, 0x03FFFFFF],
+];
+
+#[cfg(feature = "target_zcu111")]
+const BANK_INPUT_CTRL: [u32; NUM_BANKS] = [0, 0, 0];
+
+#[cfg(feature = "target_zcu111")]
+const BANK_PULL_CTRL: [u32; NUM_BANKS] = [0x03FFFFFF, 0x03FFFFFF, 0x03FFFFFF];
+
+#[cfg(feature = "target_zcu111")]
+const BANK_PULL_ENABLE: [u32; NUM_BANKS] = [0x03FFFFFF, 0x03FFFFFF, 0x03FFFFFF];
+
+#[cfg(feature = "target_zcu111")]
+const BANK_SLEW_CTRL: [u32; NUM_BANKS] = [0, 0, 0];
