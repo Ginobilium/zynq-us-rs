@@ -7,9 +7,13 @@
 use crate::slcr::common::{PllCfg, PllCtrl, PllFracCfg, Unlocked};
 use crate::slcr::{crf_apb, crl_apb};
 use libregister::{RegisterR, RegisterRW};
-use log::debug;
 
-pub const PS_CLK: u32 = 33_333_000;
+#[cfg(feature = "target_zcu111")]
+pub const PS_REF_CLK: u32 = 33_333_000;
+// ALT_REF_CLK: MIO pin 28 or 51, pins used otherwise on ZCU111
+// VIDEO_REF_CLK: MIO pin 27 or 50, pins used otherwise on ZCU111
+// AUX_REF_CLK: from PL
+// GTR_REF_CLK
 
 // DS926 Table: PS PLL Switching Characteristics (same for both speed grades)
 // const PS_PLL_MAX_LOCK_TIME: f32 = 100e-6; // 100 us
@@ -82,7 +86,15 @@ pub trait ClockSource<T: Unlocked> {
     /// get configured frequency
     fn freq(pll_ctrl: &mut PllCtrl) -> u32 {
         // todo: take into account fractional part (if enabled)
-        u32::from(pll_ctrl.read().pll_fdiv()) * PS_CLK
+        let ctrl = pll_ctrl.read();
+        let (mul, div) = if ctrl.pll_bypass() {
+            // todo: should technically read POST_SRC field to get src
+            (1u32, 1u32)
+        } else {
+            // same as above, but PRE_SRC
+            (u32::from(ctrl.pll_fdiv()), u32::from(ctrl.pll_div2()) + 1)
+        };
+        mul * PS_REF_CLK / div
     }
 
     fn name() -> &'static str;
@@ -90,9 +102,9 @@ pub trait ClockSource<T: Unlocked> {
     // UG1085 Chapter 37: PS Clock Subsystem
     fn setup(target_freq: u32) {
         assert!(target_freq >= PS_PLL_MIN_OUT_FREQ && target_freq <= PS_PLL_MAX_OUT_FREQ);
-        let div2 = target_freq < PS_PLL_MIN_VCO_FREQ;
+        let div2 = target_freq <= PS_PLL_MIN_VCO_FREQ;
         let divisor = u32::from(div2) + 1;
-        let fdiv = (target_freq * divisor / PS_CLK).min(125) as u8;
+        let fdiv = (target_freq * divisor / PS_REF_CLK).min(125) as u8;
         let (pll_cp, pll_res, lfhf, lock_dly, lock_cnt) = PLL_FDIV_LOCK_PARAM
             .iter()
             .filter(|(fdiv_max, _)| fdiv <= *fdiv_max)
@@ -101,7 +113,7 @@ pub trait ClockSource<T: Unlocked> {
             .1
             .clone();
 
-        debug!("Set {} to {} Hz", Self::name(), target_freq);
+        // debug!("Set {} to {} Hz", Self::name(), target_freq);
         T::unlocked(|slcr| {
             let (pll_ctrl, pll_cfg, _) = Self::pll_ctrl_regs(slcr);
 
@@ -117,7 +129,7 @@ pub trait ClockSource<T: Unlocked> {
                     .pll_res(pll_res)
             });
             // Bypass
-            pll_ctrl.modify(|_, w| w.pll_bypass_force(true));
+            pll_ctrl.modify(|_, w| w.pll_bypass(true));
             // Reset
             pll_ctrl.modify(|_, w| w.pll_reset(true));
             pll_ctrl.modify(|_, w| w.pll_reset(false));
@@ -125,7 +137,7 @@ pub trait ClockSource<T: Unlocked> {
             // todo: add timeout here according to the 100 us spec?
             while !Self::pll_locked() {}
             // Remove bypass
-            pll_ctrl.modify(|_, w| w.pll_bypass_force(false));
+            pll_ctrl.modify(|_, w| w.pll_bypass(false));
         });
     }
 }
