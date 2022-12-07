@@ -4,7 +4,7 @@
 // Original authors: Astro
 // Modifications made for additional register and different block addresses.
 
-use volatile_register::{RO, RW, WO};
+use volatile_register::{RW};
 
 use libregister::{register, register_at, register_bit, register_bits, register_bits_typed};
 
@@ -35,25 +35,33 @@ pub enum StopBits {
     Two = 0b10,
 }
 
+#[allow(unused)]
+#[repr(u8)]
+pub enum CharacterLength {
+    Eight = 0b00, // actually 0b0x
+    Seven = 0b10,
+    Six = 0b11,
+}
+
 #[repr(C)]
 pub struct RegisterBlock {
     pub control: Control,
     pub mode: Mode,
-    pub intrpt_en: RW<u32>,
-    pub intrpt_dis: RW<u32>,
-    pub intrpt_mask: RO<u32>,
-    pub chnl_int_sts: WO<u32>,
+    pub interrupt_enable: InterruptEnable,
+    pub interrupt_disable: InterruptDisable,
+    pub interrupt_mask: InterruptMask,
+    pub channel_interrupt_status: ChannelInterruptStatus,
     pub baud_rate_gen: BaudRateGen,
-    pub rcvr_timeout: RW<u32>,
-    pub rcvr_fifo_trigger_level: RW<u32>,
+    pub rcvr_timeout: RcvrTimeout,
+    pub rcvr_fifo_trigger_level: FifoTriggerLevel,
     pub modem_ctrl: RW<u32>,
-    pub modem_sts: RW<u32>,
+    pub modem_sts: ModemSts,
     pub channel_sts: ChannelSts,
     pub tx_rx_fifo: TxRxFifo,
     pub baud_rate_divider: BaudRateDiv,
     pub flow_delay: RW<u32>,
-    pub unused0: RO<u32>,
-    pub tx_fifo_trigger_level: RW<u32>,
+    unused0: [u32; 2],
+    pub tx_fifo_trigger_level: FifoTriggerLevel,
     pub rx_fifo_byte_status: RW<u32>,
 }
 register_at!(RegisterBlock, 0xFF000000, uart0);
@@ -80,12 +88,77 @@ register_bits_typed!(mode, nbstop, u8, StopBits, 6, 7);
 // Parity type select
 register_bits_typed!(mode, par, u8, ParityMode, 3, 5);
 // Character length select
-register_bits!(mode, chrl, u8, 1, 2);
+register_bits_typed!(mode, chrl, u8, CharacterLength, 1, 2);
 // Clock source select (0 = UART_REF_CLK, 1 = UART_REF_CLK / 8)
 register_bit!(mode, clks, 0);
 
+macro_rules! register_interrupt_bits {
+    ($mod_name: ident) => {
+        register_bit!($mod_name, rx_brk, 13);
+        register_bit!($mod_name, tx_overflow, 12);
+        register_bit!($mod_name, tx_nfull, 11);
+        register_bit!($mod_name, tx_trig, 10);
+        register_bit!($mod_name, dmsi, 9);
+        register_bit!($mod_name, rx_timeout, 8);
+        register_bit!($mod_name, rx_par, 7);
+        register_bit!($mod_name, rx_frame, 6);
+        register_bit!($mod_name, rx_overflow, 5);
+        register_bit!($mod_name, tx_full, 4);
+        register_bit!($mod_name, tx_empty, 3);
+        register_bit!($mod_name, rx_full, 2);
+        register_bit!($mod_name, rx_empty, 1);
+        register_bit!($mod_name, rx_trig, 0);
+    };
+
+    ($mod_name: ident, WTC) => {
+        register_bit!($mod_name, rx_brk, 13, WTC);
+        register_bit!($mod_name, tx_overflow, 12, WTC);
+        register_bit!($mod_name, tx_nfull, 11, WTC);
+        register_bit!($mod_name, tx_trig, 10, WTC);
+        register_bit!($mod_name, dmsi, 9, WTC);
+        register_bit!($mod_name, rx_timeout, 8, WTC);
+        register_bit!($mod_name, rx_par, 7, WTC);
+        register_bit!($mod_name, rx_frame, 6, WTC);
+        register_bit!($mod_name, rx_overflow, 5, WTC);
+        register_bit!($mod_name, tx_full, 4, WTC);
+        register_bit!($mod_name, tx_empty, 3, WTC);
+        register_bit!($mod_name, rx_full, 2, WTC);
+        register_bit!($mod_name, rx_empty, 1, WTC);
+        register_bit!($mod_name, rx_trig, 0, WTC);
+    };
+}
+
+register!(interrupt_enable, InterruptEnable, WO, u32);
+register_interrupt_bits!(interrupt_enable);
+
+register!(interrupt_disable, InterruptDisable, WO, u32);
+register_interrupt_bits!(interrupt_disable);
+
+register!(interrupt_mask, InterruptMask, RO, u32);
+register_interrupt_bits!(interrupt_mask);
+
+register!(channel_interrupt_status, ChannelInterruptStatus, RW, u32);
+register_interrupt_bits!(channel_interrupt_status, WTC);
+
 register!(baud_rate_gen, BaudRateGen, RW, u32);
 register_bits!(baud_rate_gen, cd, u16, 0, 15);
+
+register!(rcvr_timeout, RcvrTimeout, RW, u32);
+register_bits!(rcvr_timeout, rto, u8, 0, 7);
+
+register!(fifo_trigger_level, FifoTriggerLevel, RW, u32);
+register_bits!(fifo_trigger_level, level, u8, 0, 5);
+
+register!(modem_sts, ModemSts, RW, u32);
+register_bit!(modem_sts, fcms, 8);
+register_bit!(modem_sts, dcd, 7, RO);
+register_bit!(modem_sts, ri, 6, RO);
+register_bit!(modem_sts, dsr, 5, RO);
+register_bit!(modem_sts, cts, 4, RO);
+register_bit!(modem_sts, ddcd, 3, WTC);
+register_bit!(modem_sts, teri, 2, WTC);
+register_bit!(modem_sts, ddsr, 1, WTC);
+register_bit!(modem_sts, dcts, 0, WTC);
 
 register!(channel_sts, ChannelSts, RO, u32);
 // Transmitter FIFO Nearly Full
@@ -110,7 +183,7 @@ register_bit!(channel_sts, rxempty, 1);
 register_bit!(channel_sts, rxovr, 0);
 
 register!(tx_rx_fifo, TxRxFifo, RW, u32);
-register_bits!(tx_rx_fifo, data, u32, 0, 31);
+register_bits!(tx_rx_fifo, data, u8, 0, 7);
 
 register!(baud_rate_div, BaudRateDiv, RW, u32);
 register_bits!(baud_rate_div, bdiv, u8, 0, 7);
