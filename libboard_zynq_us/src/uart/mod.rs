@@ -159,8 +159,8 @@ impl Uart {
     }
 
     // 0 disables
-    fn set_rx_timeout(&mut self, enable: bool) {
-        self.regs.control.modify(|_, w| w.rstto(enable))
+    fn set_rx_timeout(&mut self, timeout: u8) {
+        self.regs.rcvr_timeout.modify(|_, w| w.rto(timeout));
     }
 
     pub fn tx_fifo_full(&self) -> bool {
@@ -170,6 +170,54 @@ impl Uart {
     pub fn tx_idle(&self) -> bool {
         let status = self.regs.channel_sts.read();
         status.txempty() && !status.tactive()
+    }
+
+    pub fn disable_interrupts(&mut self) {
+        self.regs.interrupt_disable.write(
+            regs::InterruptDisable::zeroed()
+                .rx_brk(true)
+                .tx_overflow(true)
+                .tx_nfull(true)
+                .tx_trig(true)
+                .dmsi(true)
+                .rx_timeout(true)
+                .rx_par(true)
+                .rx_frame(true)
+                .rx_overflow(true)
+                .tx_full(true)
+                .tx_empty(true)
+                .rx_full(true)
+                .rx_empty(true)
+                .rx_trig(true),
+        );
+    }
+
+    /// Clears interrupts status flags (sticky flags not cleared by reset).
+    pub fn clear_interrupt_status(&mut self) {
+        self.regs.channel_interrupt_status.write(
+            regs::ChannelInterruptStatus::zeroed()
+                .rx_brk()
+                .tx_overflow()
+                .tx_nfull()
+                .tx_trig()
+                .dmsi()
+                .rx_timeout()
+                .rx_par()
+                .rx_frame()
+                .rx_overflow()
+                .tx_full()
+                .tx_empty()
+                .rx_full()
+                .rx_empty()
+                .rx_trig(),
+        );
+    }
+
+    /// Clears WTC modem status flags
+    pub fn clear_modem_status(&mut self) {
+        self.regs
+            .modem_sts
+            .modify(|_, w| w.ddcd().teri().ddsr().dcts());
     }
 }
 
