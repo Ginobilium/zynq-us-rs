@@ -8,7 +8,7 @@ use core::fmt;
 use libregister::{RegisterR, RegisterRW, RegisterW};
 
 use super::clocks::Clocks;
-use super::slcr::{common::Unlocked, crl_apb, iou_slcr};
+use super::slcr::{common::Unlocked, crl_apb};
 
 mod baud_rate_gen;
 mod regs;
@@ -20,19 +20,6 @@ pub struct Uart {
 impl Uart {
     #[cfg(feature = "target_zcu111")]
     pub fn uart0(baudrate: u32) -> Self {
-        iou_slcr::RegisterBlock::unlocked(|slcr| {
-            // UART0 RxD
-            slcr.mio_pin[18].write(iou_slcr::MioPin::zeroed().l3_sel(0b110));
-            slcr.mio_pull_enable(18, true);
-            slcr.mio_pullup(18, true);
-            slcr.mio_tri_enable(18, true);
-
-            // UART0 TxD
-            slcr.mio_pin[19].write(iou_slcr::MioPin::zeroed().l3_sel(0b110));
-            slcr.mio_pull_enable(19, true);
-            slcr.mio_pullup(19, true);
-        });
-
         crl_apb::RegisterBlock::unlocked(|slcr| {
             // reset uart
             slcr.peri_rst_ctrl.modify(|_, w| w.uart0_rst(true));
@@ -49,19 +36,6 @@ impl Uart {
 
     #[cfg(not(feature = "target_zcu111"))]
     pub fn uart1(baudrate: u32) -> Self {
-        iou_slcr::RegisterBlock::unlocked(|slcr| {
-            // UART1 RxD
-            slcr.mio_pin[21].write(iou_slcr::MioPin::zeroed().l3_sel(0b110));
-            slcr.mio_pull_enable(21, true);
-            slcr.mio_pullup(21, true);
-            slcr.mio_tri_enable(21, true);
-
-            // UART1 TxD
-            slcr.mio_pin[20].write(iou_slcr::MioPin::zeroed().l3_sel(0b110));
-            slcr.mio_pull_enable(20, true);
-            slcr.mio_pullup(20, true);
-        });
-
         crl_apb::RegisterBlock::unlocked(|slcr| {
             // reset uart
             slcr.peri_rst_ctrl.modify(|_, w| w.uart1_rst(true));
