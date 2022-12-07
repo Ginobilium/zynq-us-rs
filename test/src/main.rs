@@ -1,4 +1,3 @@
-
 // Adapted from https://git.m-labs.hk/M-labs/zynq-rs
 // Commit: 5a8d714627
 // File: experiments/src/main.rs
@@ -7,12 +6,8 @@
 #![no_main]
 #![feature(asm)]
 #![feature(naked_functions)]
-// #![feature(compiler_builtins_lib)]
-// #![feature(never_type)]
+#![feature(stmt_expr_attributes)]
 
-// extern crate alloc;
-
-// use core::mem::uninitialized;
 use core::fmt::Write;
 
 use libregister::{RegisterR, RegisterW};
@@ -21,12 +16,13 @@ use r0::zero_bss;
 
 use libboard_zynq_us::{
     clocks::{self, source::ClockSource},
+    slcr::{
+        common::{PllCfg, PllCtrl, Unlocked},
+        crl_apb, iou_slcr,
+    },
     uart,
 };
-use libcortex_a53::{
-    asm, cache,
-    regs::{MPIDREL1, SP},
-};
+use libcortex_a53::{asm, cache, regs::SCTLREL3};
 
 extern "C" {
     static mut __bss_start: u64;
@@ -39,11 +35,15 @@ extern "C" {
 #[naked]
 pub unsafe extern "C" fn _boot_cores() -> ! {
     asm!(
-        "mrs x0, mpidr_el1",  // read MPIDR_EL1
-        "and x0, x0, #0xff",  // get CPU ID within cluster (0-3)
+        // get CPU ID within cluster (0-3)
+        "mrs x0, MPIDR_EL1",
+        "and x0, x0, #0xff",
         // TODO: configure SPs for other cores. For now just worry about core 0.
         "cbnz x0, 0f",
         // core 0
+        // TODO: VBAR stuff
+        // "ldr x1, =exception_vector",
+        // "msr VBAR_EL3, x1",
         "ldr x1, =__stack0_start",
         "mov sp, x1",
         "bl boot_core0",
@@ -58,7 +58,7 @@ pub unsafe extern "C" fn _boot_cores() -> ! {
 #[no_mangle]
 #[inline(never)]
 unsafe fn boot_core0() -> ! {
-    // cache_init();
+    cache_init();
     zero_bss(&mut __bss_start, &mut __bss_end);
     main();
     panic!("return from main")
@@ -73,7 +73,18 @@ fn cache_init() {
 }
 
 fn main() {
-    clocks::source::IoPll::setup(1_000_000_000);
+    // setup MIO pins
+    iou_slcr::RegisterBlock::unlocked(|slcr| slcr.mio_init());
+    // 1.5 GHz IO PLL
+    clocks::source::IoPll::setup(1_500_000_000);
+    crl_apb::RegisterBlock::unlocked(|slcr| {
+        // 500 MHz to FPD
+        slcr.io_pll_to_fpd_ctrl
+            .write(crl_apb::PllToFpdCtrl::zeroed().divisor0(2));
+        // 50 MHz UART ref clock
+        slcr.uart0_clk_ctrl
+            .write(crl_apb::UartClkCtrl::zeroed().divisor1(1).divisor0(30));
+    });
     let mut uart = uart::Uart::uart0(115_200);
     write!(uart, "Hello, world!\r\n").unwrap();
     loop {
