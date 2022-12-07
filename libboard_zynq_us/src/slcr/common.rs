@@ -13,7 +13,7 @@ register_bits!(pll_ctrl, pll_post_src, u8, 24, 26);
 register_bits!(pll_ctrl, pll_pre_src, u8, 20, 22);
 register_bit!(pll_ctrl, pll_div2, 16);
 register_bits!(pll_ctrl, pll_fdiv, u8, 8, 14);
-register_bit!(pll_ctrl, pll_bypass_force, 3);
+register_bit!(pll_ctrl, pll_bypass, 3);
 register_bit!(pll_ctrl, pll_reset, 0);
 
 register!(pll_cfg, PllCfg, RW, u32);
