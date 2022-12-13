@@ -69,7 +69,7 @@
 
       gnu-platform = "aarch64-none-elf";
 
-      binutils-pkg = { zlib, bison, perl, texinfo, gettext, extraConfigureFlags ? [] }: pkgs.stdenv.mkDerivation rec {
+      binutils-pkg = { zlib, bison, perl, texinfo, gettext, extraConfigureFlags ? [ ] }: pkgs.stdenv.mkDerivation rec {
         basename = "binutils";
         pname = "${basename}-${gnu-platform}";
         version = "2.39";
@@ -104,7 +104,7 @@
         };
       };
 
-      gcc-pkg = { gmp, mpfr, libmpc, platform-binutils, extraConfigureFlags ? [] }: pkgs.stdenv.mkDerivation rec {
+      gcc-pkg = { gmp, mpfr, libmpc, platform-binutils, extraConfigureFlags ? [ ] }: pkgs.stdenv.mkDerivation rec {
         basename = "gcc";
         pname = "${basename}-${gnu-platform}";
         version = "12.2.0";
@@ -114,14 +114,15 @@
           cd build
         '';
         configureScript = "../configure";
-        configureFlags = [ 
+        configureFlags = [
           "--target=${gnu-platform}"
-          "--with-arch=armv8-a"
+          "--with-arch=armv8.2-a"
           "--with-tune=cortex-a53"
           "--disable-libssp"
           "--enable-languages=c"
           "--with-as=${platform-binutils}/bin/${gnu-platform}-as"
-          "--with-ld=${platform-binutils}/bin/${gnu-platform}-ld" ] ++ extraConfigureFlags;
+          "--with-ld=${platform-binutils}/bin/${gnu-platform}-ld"
+        ] ++ extraConfigureFlags;
         outputs = [ "out" "info" "man" ];
         hardeningDisable = [ "format" "pie" ];
         propagatedBuildInputs = [ gmp mpfr libmpc platform-binutils ];
@@ -129,49 +130,61 @@
         dontFixup = true;
       };
 
-      gdb-pkg = { 
-        pkg-config, texinfo, perl, setupDebugInfoDirs, 
-        ncurses, readline, gmp, mpfr, expat, libipt, zlib, guile, sourceHighlight,
-      }: pkgs.stdenv.mkDerivation rec {
-        basename = "gdb";
-        pname = "${basename}-${gnu-platform}";
-        version = "12.1";
-        src = gdb-src;
+      gdb-pkg =
+        { pkg-config
+        , texinfo
+        , perl
+        , setupDebugInfoDirs
+        , ncurses
+        , readline
+        , gmp
+        , mpfr
+        , expat
+        , libipt
+        , zlib
+        , guile
+        , sourceHighlight
+        ,
+        }: pkgs.stdenv.mkDerivation rec {
+          basename = "gdb";
+          pname = "${basename}-${gnu-platform}";
+          version = "12.1";
+          src = gdb-src;
 
-        nativeBuildInputs = [ pkg-config texinfo perl setupDebugInfoDirs ];
-        buildInputs = [ ncurses readline gmp mpfr expat libipt zlib guile sourceHighlight ];
-        propagatedNativeBuildInputs = [ setupDebugInfoDirs ];
-        depsBuildBuild = [ pkgs.buildPackages.stdenv.cc ];
+          nativeBuildInputs = [ pkg-config texinfo perl setupDebugInfoDirs ];
+          buildInputs = [ ncurses readline gmp mpfr expat libipt zlib guile sourceHighlight ];
+          propagatedNativeBuildInputs = [ setupDebugInfoDirs ];
+          depsBuildBuild = [ pkgs.buildPackages.stdenv.cc ];
 
-        preConfigure = ''
-          mkdir _build
-          cd _build
-        '';
-        configureScript = "../configure";
-        configureFlags = [
-          "--disable-werror"
-          "--disable-install-libbfd"
-          "--disable-shared"
-          "--enable-static"
-          "--with-system-zlib"
-          "--with-system-readline"
-          "--enable-tui"
-          "--with-curses"
-          "--with-gmp=${gmp.dev}"
-          "--with-mpfr=${mpfr.dev}"
-          # "--with-guile=${guile.dev}"
-          "--with-expat" 
-          "--with-libexpat-prefix=${expat.dev}"
-          "--target=${gnu-platform}"
-          "--with-arch=armv8-a"
-          "--with-tune=cortex-a53"
-        ];
-        postInstall = '' 
+          preConfigure = ''
+            mkdir _build
+            cd _build
+          '';
+          configureScript = "../configure";
+          configureFlags = [
+            "--disable-werror"
+            "--disable-install-libbfd"
+            "--disable-shared"
+            "--enable-static"
+            "--with-system-zlib"
+            "--with-system-readline"
+            "--enable-tui"
+            "--with-curses"
+            "--with-gmp=${gmp.dev}"
+            "--with-mpfr=${mpfr.dev}"
+            # "--with-guile=${guile.dev}"
+            "--with-expat"
+            "--with-libexpat-prefix=${expat.dev}"
+            "--target=${gnu-platform}"
+            "--with-arch=armv8.2-a"
+            "--with-tune=cortex-a53"
+          ];
+          postInstall = '' 
           # Remove Info files already provided by Binutils and other packages.
           rm -v $out/share/info/bfd.info
         '';
-        enableParallelBuilding = true;
-      };
+          enableParallelBuilding = true;
+        };
 
       newlib-pkg = { platform-binutils, platform-gcc }: pkgs.stdenv.mkDerivation rec {
         pname = "newlib";
@@ -235,7 +248,7 @@
       openocd = pkgs.openocd.overrideAttrs (oa: rec {
         version = "0.12.0-rc2";
         src = openocd-src;
-        patches = [];
+        patches = [ ];
         buildInputs = oa.buildInputs ++ [ pkgs.capstone ];
       });
     in
