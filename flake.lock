@@ -13,6 +13,23 @@
         "url": "https://ftp.gnu.org/gnu/binutils/binutils-2.39.tar.bz2"
       }
     },
+    "cargo-xbuild-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1611557405,
+        "narHash": "sha256-bnceN47OFGlxs3ibcKoZFjoTgXRQxA2ZqxnthJ/fsqE=",
+        "owner": "rust-osdev",
+        "repo": "cargo-xbuild",
+        "rev": "f6ce1e5da41ad68951657a87abd2e034de611eb1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "rust-osdev",
+        "ref": "v0.6.5",
+        "repo": "cargo-xbuild",
+        "type": "github"
+      }
+    },
     "gcc-src": {
       "flake": false,
       "locked": {
@@ -86,11 +103,11 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1670148586,
-        "narHash": "sha256-EcDfOiTHs0UBAtyGc0wxJJdhcMjrJEgWXjJutxZGA3E=",
+        "lastModified": 1670827406,
+        "narHash": "sha256-nLNk7uiLbhbvb4TVz67XK7+Ezr1zcWYDWmNrWGmEUqA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a2d2f70b82ada0eadbcb1df2bca32d841a3c1bf1",
+        "rev": "ffca9ffaaafb38c8979068cee98b2644bd3f14cb",
         "type": "github"
       },
       "original": {
@@ -116,6 +133,7 @@
     "root": {
       "inputs": {
         "binutils-src": "binutils-src",
+        "cargo-xbuild-src": "cargo-xbuild-src",
         "gcc-src": "gcc-src",
         "gdb-src": "gdb-src",
         "mozilla-overlay": [
@@ -129,7 +147,20 @@
         ],
         "nixpkgs-unstable": "nixpkgs-unstable",
         "openocd-src": "openocd-src",
+        "rustManifest": "rustManifest",
         "zynq-rs": "zynq-rs"
+      }
+    },
+    "rustManifest": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-lQpaHtaEU6bZq+k/5pYQJulWQ+MS47IMjJY20hiCHY8=",
+        "type": "file",
+        "url": "https://static.rust-lang.org/dist/2022-12-11/channel-rust-nightly.toml"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://static.rust-lang.org/dist/2022-12-11/channel-rust-nightly.toml"
       }
     },
     "zynq-rs": {

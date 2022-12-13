@@ -36,15 +36,35 @@
       narHash = "sha256-xwi6Y7aglrLo0p1TAwCGU+ApNgNRXnJcffrWZc5RdwE=";
       flake = false;
     };
+    rustManifest = {
+      url = https://static.rust-lang.org/dist/2022-12-11/channel-rust-nightly.toml;
+      flake = false;
+    };
+    cargo-xbuild-src = {
+      url = github:rust-osdev/cargo-xbuild/v0.6.5;
+      flake = false;
+    };
   };
 
-  outputs = { self, zynq-rs, nixpkgs, nixpkgs-unstable, mozilla-overlay, binutils-src, gcc-src, gdb-src, newlib-src, openocd-src }:
+  outputs = { self, zynq-rs, nixpkgs, nixpkgs-unstable, mozilla-overlay, binutils-src, gcc-src, gdb-src, newlib-src, openocd-src, rustManifest, cargo-xbuild-src }:
     let
       pkgs = import nixpkgs { system = "x86_64-linux"; overlays = [ (import mozilla-overlay) ]; };
       pkgs-unstable = import nixpkgs-unstable { system = "x86_64-linux"; };
 
-      rustPlatform = zynq-rs.rustPlatform;
-      cargo-xbuild = zynq-rs.packages.x86_64-linux.cargo-xbuild;
+      rustTargets = [ ];
+      rustChannelOfTargets = _channel: _date: targets:
+        (pkgs.lib.rustLib.fromManifestFile rustManifest {
+          inherit (pkgs) stdenv lib fetchurl patchelf;
+        }).rust.override {
+          inherit targets;
+          extensions = [ "rust-src" ];
+        };
+      rust = rustChannelOfTargets "nightly" null rustTargets;
+      rustPlatform = pkgs.recurseIntoAttrs (pkgs.makeRustPlatform {
+        rustc = rust;
+        cargo = rust;
+      });
+
       mkbootimage = zynq-rs.packages.x86_64-linux.mkbootimage;
 
       gnu-platform = "aarch64-none-elf";
@@ -196,7 +216,23 @@
         gdb = pkgs.callPackage gdb-pkg { readline = pkgs.readline81; };
       };
 
-      openocd = pkgs.openocd.overrideAttrs(oa: rec {
+      cargo-xbuild = rustPlatform.buildRustPackage rec {
+        pname = "cargo-xbuild";
+        version = "0.6.5";
+
+        src = cargo-xbuild-src;
+        cargoSha256 = "13sj9j9kl6js75h9xq0yidxy63vixxm9q3f8jil6ymarml5wkhx8";
+
+        meta = with pkgs.lib; {
+          description = "Automatically cross-compiles the sysroot crates core, compiler_builtins, and alloc";
+          homepage = "https://github.com/rust-osdev/cargo-xbuild";
+          license = with licenses; [ mit asl20 ];
+          maintainers = with maintainers; [ johntitor xrelkd ];
+        };
+      };
+
+
+      openocd = pkgs.openocd.overrideAttrs (oa: rec {
         version = "0.12.0-rc2";
         src = openocd-src;
         patches = [];
