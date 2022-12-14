@@ -13,23 +13,6 @@
         "url": "https://ftp.gnu.org/gnu/binutils/binutils-2.39.tar.bz2"
       }
     },
-    "cargo-xbuild-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1611557405,
-        "narHash": "sha256-bnceN47OFGlxs3ibcKoZFjoTgXRQxA2ZqxnthJ/fsqE=",
-        "owner": "rust-osdev",
-        "repo": "cargo-xbuild",
-        "rev": "f6ce1e5da41ad68951657a87abd2e034de611eb1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "rust-osdev",
-        "ref": "v0.6.5",
-        "repo": "cargo-xbuild",
-        "type": "github"
-      }
-    },
     "gcc-src": {
       "flake": false,
       "locked": {
@@ -57,6 +40,21 @@
       }
     },
     "mozilla-overlay": {
+      "locked": {
+        "lastModified": 1664789696,
+        "narHash": "sha256-UGWJHQShiwLCr4/DysMVFrYdYYHcOqAOVsWNUu+l6YU=",
+        "owner": "mozilla",
+        "repo": "nixpkgs-mozilla",
+        "rev": "80627b282705101e7b38e19ca6e8df105031b072",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mozilla",
+        "repo": "nixpkgs-mozilla",
+        "type": "github"
+      }
+    },
+    "mozilla-overlay_2": {
       "flake": false,
       "locked": {
         "lastModified": 1664789696,
@@ -87,6 +85,22 @@
     },
     "nixpkgs": {
       "locked": {
+        "lastModified": 1670700605,
+        "narHash": "sha256-5dlpATkcyITpdtMflhltuD+A3RNpsVI1Mb+dtKkll6Y=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "7b9eeb856cbf976482fa8d1cb295ea03fb3e1277",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-22.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
         "lastModified": 1669735802,
         "narHash": "sha256-qtG/o/i5ZWZLmXw108N2aPiVsxOcidpHJYNkT45ry9Q=",
         "owner": "NixOS",
@@ -97,22 +111,6 @@
       "original": {
         "owner": "NixOS",
         "ref": "nixos-22.11",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs-unstable": {
-      "locked": {
-        "lastModified": 1670827406,
-        "narHash": "sha256-nLNk7uiLbhbvb4TVz67XK7+Ezr1zcWYDWmNrWGmEUqA=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "ffca9ffaaafb38c8979068cee98b2644bd3f14cb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -133,19 +131,11 @@
     "root": {
       "inputs": {
         "binutils-src": "binutils-src",
-        "cargo-xbuild-src": "cargo-xbuild-src",
         "gcc-src": "gcc-src",
         "gdb-src": "gdb-src",
-        "mozilla-overlay": [
-          "zynq-rs",
-          "mozilla-overlay"
-        ],
+        "mozilla-overlay": "mozilla-overlay",
         "newlib-src": "newlib-src",
-        "nixpkgs": [
-          "zynq-rs",
-          "nixpkgs"
-        ],
-        "nixpkgs-unstable": "nixpkgs-unstable",
+        "nixpkgs": "nixpkgs",
         "openocd-src": "openocd-src",
         "rustManifest": "rustManifest",
         "zynq-rs": "zynq-rs"
@@ -165,8 +155,8 @@
     },
     "zynq-rs": {
       "inputs": {
-        "mozilla-overlay": "mozilla-overlay",
-        "nixpkgs": "nixpkgs"
+        "mozilla-overlay": "mozilla-overlay_2",
+        "nixpkgs": "nixpkgs_2"
       },
       "locked": {
         "lastModified": 1669819016,

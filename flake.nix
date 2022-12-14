@@ -3,9 +3,8 @@
 
   inputs = {
     zynq-rs.url = git+https://git.m-labs.hk/M-Labs/zynq-rs;
-    nixpkgs.follows = "zynq-rs/nixpkgs";
-    nixpkgs-unstable.url = github:NixOS/nixpkgs/nixpkgs-unstable;
-    mozilla-overlay.follows = "zynq-rs/mozilla-overlay";
+    nixpkgs.url = github:NixOS/nixpkgs/nixos-22.05;
+    mozilla-overlay.url = github:mozilla/nixpkgs-mozilla;
     binutils-src = {
       type = "tarball";
       url = "https://ftp.gnu.org/gnu/binutils/binutils-2.39.tar.bz2";
@@ -40,26 +39,17 @@
       url = https://static.rust-lang.org/dist/2022-12-11/channel-rust-nightly.toml;
       flake = false;
     };
-    cargo-xbuild-src = {
-      url = github:rust-osdev/cargo-xbuild/v0.6.5;
-      flake = false;
-    };
   };
 
-  outputs = { self, zynq-rs, nixpkgs, nixpkgs-unstable, mozilla-overlay, binutils-src, gcc-src, gdb-src, newlib-src, openocd-src, rustManifest, cargo-xbuild-src }:
+  outputs = { self, zynq-rs, nixpkgs, mozilla-overlay, binutils-src, gcc-src, gdb-src, newlib-src, openocd-src, rustManifest }:
     let
-      pkgs = import nixpkgs { system = "x86_64-linux"; overlays = [ (import mozilla-overlay) ]; };
-      pkgs-unstable = import nixpkgs-unstable { system = "x86_64-linux"; };
+      pkgs = import nixpkgs { system = "x86_64-linux"; overlays = [ mozilla-overlay.overlays.rust ]; };
 
-      rustTargets = [ ];
-      rustChannelOfTargets = _channel: _date: targets:
-        (pkgs.lib.rustLib.fromManifestFile rustManifest {
-          inherit (pkgs) stdenv lib fetchurl patchelf;
-        }).rust.override {
-          inherit targets;
-          extensions = [ "rust-src" ];
-        };
-      rust = rustChannelOfTargets "nightly" null rustTargets;
+      rust = (pkgs.lib.rustLib.fromManifestFile rustManifest {
+        inherit (pkgs) stdenv lib fetchurl patchelf;
+      }).rust.override {
+        extensions = [ "rust-src" ];
+      };
       rustPlatform = pkgs.recurseIntoAttrs (pkgs.makeRustPlatform {
         rustc = rust;
         cargo = rust;
@@ -229,22 +219,6 @@
         gdb = pkgs.callPackage gdb-pkg { readline = pkgs.readline81; };
       };
 
-      cargo-xbuild = rustPlatform.buildRustPackage rec {
-        pname = "cargo-xbuild";
-        version = "0.6.5";
-
-        src = cargo-xbuild-src;
-        cargoSha256 = "13sj9j9kl6js75h9xq0yidxy63vixxm9q3f8jil6ymarml5wkhx8";
-
-        meta = with pkgs.lib; {
-          description = "Automatically cross-compiles the sysroot crates core, compiler_builtins, and alloc";
-          homepage = "https://github.com/rust-osdev/cargo-xbuild";
-          license = with licenses; [ mit asl20 ];
-          maintainers = with maintainers; [ johntitor xrelkd ];
-        };
-      };
-
-
       openocd = pkgs.openocd.overrideAttrs (oa: rec {
         version = "0.12.0-rc2";
         src = openocd-src;
@@ -256,19 +230,19 @@
       devShells.x86_64-linux.default = pkgs.mkShell {
         name = "zynq-us-rs-dev-shell";
         buildInputs = (with pkgs; [
-          gdb
-          llvmPackages_9.clang-unwrapped
+          rustup  # currently required for build-std to find the rust source
         ]) ++ [
           rustPlatform.rust.rustc
           rustPlatform.rust.cargo
           gnutoolchain.binutils
           gnutoolchain.gcc
           gnutoolchain.gdb
-          cargo-xbuild
           mkbootimage
           openocd
         ];
       };
+
+      inherit rustPlatform;
 
       formatter.x86_64-linux = pkgs.nixpkgs-fmt;
     };
