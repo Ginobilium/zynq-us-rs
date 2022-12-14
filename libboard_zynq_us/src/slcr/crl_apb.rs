@@ -167,6 +167,19 @@ impl Unlocked for RegisterBlock {
     }
 }
 
+impl RegisterBlock {
+    pub fn pre_pll_init(&mut self) {
+        // self.ps_sysmon_clk_ctrl.write(
+        //     PsSysmonClkCtrl::zeroed()
+        //         .divisor1(1)
+        //         .divisor0(35)
+        //         .srcsel(RpuClkSource::IoPll)
+        //         .clkact(true)
+        // );
+        self.peri_rst_ctrl.modify(|_, w| w.qspi_rst(true));
+    }
+}
+
 register!(pll_status, PllStatus, RO, u32);
 register_bit!(pll_status, rpu_pll_stable, 4);
 register_bit!(pll_status, io_pll_stable, 3);
