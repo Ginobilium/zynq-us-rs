@@ -1,3 +1,4 @@
+use core::arch::asm;
 use libregister::{register_bit, register_bits, RegisterR, RegisterW};
 
 // Macros copied from https://git.m-labs.hk/M-labs/zynq-rs

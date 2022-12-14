@@ -1,8 +1,9 @@
 #![no_std]
-#![feature(asm, global_asm)]
 #![feature(never_type)]
-#![feature(const_fn)]
+use core::arch::global_asm;
 
 pub mod asm;
 pub mod cache;
 pub mod regs;
+
+global_asm!(include_str!("exceptions.S"));

@@ -1,4 +1,5 @@
 ///! Miscellaneous instructions
+use core::arch::asm;
 
 /// Instruction Synchronization Barrier
 #[inline(always)]

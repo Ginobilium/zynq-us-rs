@@ -1,4 +1,5 @@
 ///! Cache maintenance operations
+use core::arch::asm;
 use core::mem::size_of_val;
 
 use super::asm::{dmb_os, dsb_os};
