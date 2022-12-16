@@ -4,6 +4,7 @@ use volatile_register::{RO, RW};
 #[allow(unused)]
 #[repr(u8)]
 pub enum DeviceConfig {
+    X4 = 0b00,
     X8 = 0b01,
     X16 = 0b10,
     X32 = 0b11,
@@ -30,22 +31,22 @@ pub struct RegisterBlock {
     pub master: Master,
     pub status: Status,
     unused1: [u32; 2],
-    pub mode_ctrl0: RW<u32>,
+    pub mode_ctrl0: ModeCtrl0,
     pub mode_ctrl1: RW<u32>,
     pub mode_status: RO<u32>,
     pub mode_ctrl2: RW<u32>,
-    pub derate_en: RW<u32>,
-    pub derate_interval: RW<u32>,
+    pub derate_en: DerateEn,
+    pub derate_interval: DerateInterval,
     unused2: [u32; 2],
-    pub pwr_ctrl: RW<u32>,
-    pub pwr_timing: RW<u32>,
+    pub power_ctrl: PowerCtrl,
+    pub power_timing: PowerTiming,
     pub hw_lp_ctrl: RW<u32>,
     unused3: [u32; 5],
-    pub refresh_ctrl0: RW<u32>,
-    pub refresh_ctrl1: RW<u32>,
+    pub refresh_ctrl0: RefreshCtrl0,
+    pub refresh_ctrl1: RefreshCtrl1,
     unused4: [u32; 1],
-    pub refresh_ctrl3: RW<u32>,
-    pub refresh_timing: RW<u32>,
+    pub refresh_ctrl3: RefreshCtrl3,
+    pub refresh_timing: RefreshTiming,
     unused5: [u32; 2],
     pub ecc_cfg0: RW<u32>,
     pub ecc_cfg1: RW<u32>,
@@ -278,3 +279,55 @@ register!(status, Status, RO, u32);
 register_bits!(status, selfref_state, u8, 8, 9);
 register_bits!(status, selfref_type, u8, 4, 5);
 register_bits!(status, operating_mode, u8, 0, 2);
+
+register!(mode_ctrl0, ModeCtrl0, RW, u32);
+register_bit!(mode_ctrl0, mr_wr, 31);
+register_bits!(mode_ctrl0, mr_addr, u8, 12, 15);
+register_bits!(mode_ctrl0, mr_rank, u8, 4, 5);
+register_bit!(mode_ctrl0, sw_init_int, 3);
+register_bit!(mode_ctrl0, pda_en, 2);
+register_bit!(mode_ctrl0, mpr_en, 1);
+register_bit!(mode_ctrl0, mr_type, 0);
+
+register!(derate_en, DerateEn, RW, u32);
+register_bits!(derate_en, rc_derate_value, u8, 8, 9);
+register_bits!(derate_en, derate_byte, u8, 4, 7);
+register_bit!(derate_en, derate_value, 1);
+register_bit!(derate_en, derate_enable, 0);
+
+register!(derate_interval, DerateInterval, RW, u32);
+register_bits!(derate_interval, mr4_read_interval, u32, 0, 31);
+
+register!(power_ctrl, PowerCtrl, RW, u32);
+register_bit!(power_ctrl, stay_in_self_ref, 6);
+register_bit!(power_ctrl, sel_fref_sw, 5);
+register_bit!(power_ctrl, mpsm_en, 4);
+register_bit!(power_ctrl, en_dfi_dram_clk_disable, 3);
+register_bit!(power_ctrl, deep_powerdown_en, 2);
+register_bit!(power_ctrl, powerdown_en, 1);
+register_bit!(power_ctrl, self_ref_en, 0);
+
+register!(power_timing, PowerTiming, RW, u32);
+register_bits!(power_timing, self_ref_to_x32, u8, 16, 23);
+register_bits!(power_timing, t_dpd_x4096, u8, 8, 15);
+register_bits!(power_timing, powerdown_to_x32, u8, 0, 4);
+
+register!(refresh_ctrl0, RefreshCtrl0, RW, u32);
+register_bits!(refresh_ctrl0, refresh_margin, u8, 20, 23);
+register_bits!(refresh_ctrl0, refresh_to_x32, u8, 12, 16);
+register_bits!(refresh_ctrl0, refresh_burst, u8, 4, 8);
+register_bit!(refresh_ctrl0, per_bank_refresh, 2);
+
+register!(refresh_ctrl1, RefreshCtrl1, RW, u32);
+register_bits!(refresh_ctrl1, timer1_start_value_x32, u16, 16, 27);
+register_bits!(refresh_ctrl1, timer0_start_value_x32, u16, 0, 11);
+
+register!(refresh_ctrl3, RefreshCtrl3, RW, u32);
+register_bits!(refresh_ctrl3, refresh_mode, u8, 4, 6);
+register_bit!(refresh_ctrl3, refresh_update_level, 1);
+register_bit!(refresh_ctrl3, disable_auto_refresh, 0);
+
+register!(refresh_timing, RefreshTiming, RW, u32);
+register_bits!(refresh_timing, t_rfc_nom_x32, u16, 16, 27);
+register_bit!(refresh_timing, lpddr3_trefbw_en, 15);
+register_bits!(refresh_timing, t_rfc_min, u16, 0, 9);
