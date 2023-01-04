@@ -57,7 +57,7 @@ impl DerefMut for LazyUart {
 macro_rules! print {
     ($($arg:tt)*) => ({
         use core::fmt::Write;
-        let mut uart = $crate::stdio::get_uart();
+        let uart = $crate::stdio::get_uart();
         let _ = write!(uart, $($arg)*);
     })
 }
@@ -66,9 +66,9 @@ macro_rules! print {
 macro_rules! println {
     ($($arg:tt)*) => ({
         use core::fmt::Write;
-        let mut uart = $crate::stdio::get_uart();
+        let uart = $crate::stdio::get_uart();
         let _ = write!(uart, $($arg)*);
-        let _ = write!(uart, "\r\n");
+        let _ = write!(uart, "\n");
         // flush after the newline
         while !uart.tx_idle() {}
     })
