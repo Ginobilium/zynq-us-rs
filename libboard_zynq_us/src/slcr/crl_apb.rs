@@ -230,11 +230,9 @@ register_bits!(rpu_clk_ctrl, divisor0, u8, 8, 13);
 register_bits_typed!(rpu_clk_ctrl, srcsel, u8, RpuClkSource, 0, 2);
 
 macro_rules! single_div_clk_reg {
-    // default to RpuClkSource
     ($mod_name: ident, $struct_name: ident, $srcsel_type: ident) => {
         register!($mod_name, $struct_name, RW, u32);
         register_bit!($mod_name, clkact, 24);
-        register_bits!($mod_name, divisor1, u8, 16, 21);
         register_bits!($mod_name, divisor0, u8, 8, 13);
         register_bits_typed!($mod_name, srcsel, u8, $srcsel_type, 0, 2);
     };
