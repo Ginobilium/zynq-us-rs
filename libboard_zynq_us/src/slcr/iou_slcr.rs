@@ -17,7 +17,7 @@ pub struct RegisterBlock {
     pub wdt_clk_sel: RW<u32>, // 0 = internal APB clock, 1 = external
     pub can_mio_ctrl: RW<u32>,
     pub gem_clk_ctrl: RW<u32>,
-    pub sdio_clk_ctrl: RW<u32>,
+    pub sdio_clk_ctrl: SdioClkCtrl,
     pub ctrl_reg_sd: RW<u32>,
     pub sd_itap_dly: RW<u32>,
     pub sd_otap_dly_sel: RW<u32>,
@@ -143,6 +143,16 @@ register_bit!(bank_status, voltage_mode, 0);
 
 register!(mio_tri_enable, MioTriEnable, RW, u32);
 register_bits!(mio_tri_enable, enable, u32, 0, 31);
+
+register!(sdio_clk_ctrl, SdioClkCtrl, RW, u32);
+// 0: MIO, 1: EMIO
+register_bit!(sdio_clk_ctrl, sdio1_fb_clk_sel, 18);
+// 0: MIO 51, 1: MIO 76
+register_bit!(sdio_clk_ctrl, sdio1_rx_src_sel, 17);
+// 0: MIO, 1: EMIO
+register_bit!(sdio_clk_ctrl, sdio0_fb_clk_sel, 2);
+// 00: MIO 22, 01: MIO 38, 1x: MIO 64
+register_bits!(sdio_clk_ctrl, sdio0_rx_src_sel, u8, 0, 1);
 
 // Target-specific constants
 // (L3_SEL, L2_SEL, L1_SEL, L0_SEL)
