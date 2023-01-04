@@ -57,9 +57,9 @@ pub struct RegisterBlock {
     unused6: [u32; 12],
     pub dbg_tstmp_clk_ctrl: RW<u32>,
     unused7: [u32; 1],
-    pub rst_fpd_top: RW<u32>,
-    pub rst_fpd_apu: RW<u32>,
-    pub rst_ddr_ss: RW<u32>,
+    pub rst_fpd_top: RstFpdTop,
+    pub rst_fpd_apu: RstFpdApu,
+    pub rst_ddr_ss: RstDdrSS,
 }
 register_at!(RegisterBlock, 0xFD1A_0000, slcr);
 
@@ -95,3 +95,37 @@ register_bits!(ddr_clk_ctrl, divisor0, u8, 8, 13);
 // 000: DDR PLL
 // 001: Video PLL
 register_bits!(ddr_clk_ctrl, srcsel, u8, 0, 2);
+
+register!(rst_fpd_top, RstFpdTop, RW, u32);
+register_bit!(rst_fpd_top, pcie_cfg_reset, 19);
+register_bit!(rst_fpd_top, pcie_bridge_reset, 18);
+register_bit!(rst_fpd_top, pcie_ctrl_reset, 17);
+register_bit!(rst_fpd_top, dp_reset, 16);
+register_bit!(rst_fpd_top, swdt_reset, 15);
+register_bit!(rst_fpd_top, s_axi_hpc_3_fpd_reset, 12);
+register_bit!(rst_fpd_top, s_axi_hpc_2_fpd_reset, 11);
+register_bit!(rst_fpd_top, s_axi_hp_1_fpd_reset, 10);
+register_bit!(rst_fpd_top, s_axi_hp_0_fpd_reset, 9);
+register_bit!(rst_fpd_top, s_axi_hpc_1_fpd_reset, 8);
+register_bit!(rst_fpd_top, s_axi_hpc_0_fpd_reset, 7);
+register_bit!(rst_fpd_top, fpd_dma_reset, 6);
+register_bit!(rst_fpd_top, gpu_pp1_reset, 5);
+register_bit!(rst_fpd_top, gpu_pp0_reset, 4);
+register_bit!(rst_fpd_top, gpu_reset, 3);
+register_bit!(rst_fpd_top, gt_reset, 2);
+register_bit!(rst_fpd_top, sata_reset, 1);
+
+register!(rst_fpd_apu, RstFpdApu, RW, u32);
+register_bit!(rst_fpd_apu, apu3_por, 13);
+register_bit!(rst_fpd_apu, apu2_por, 12);
+register_bit!(rst_fpd_apu, apu1_por, 11);
+register_bit!(rst_fpd_apu, apu0_por, 10);
+register_bit!(rst_fpd_apu, apu_l2_reset, 8);
+register_bit!(rst_fpd_apu, apu3_reset, 3);
+register_bit!(rst_fpd_apu, apu2_reset, 2);
+register_bit!(rst_fpd_apu, apu1_reset, 1);
+register_bit!(rst_fpd_apu, apu0_reset, 0);
+
+register!(rst_ddr_ss, RstDdrSS, RW, u32);
+register_bit!(rst_ddr_ss, ddr_reset, 3);
+register_bit!(rst_ddr_ss, apm_reset, 2);
