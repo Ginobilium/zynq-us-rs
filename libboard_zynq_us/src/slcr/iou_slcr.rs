@@ -7,14 +7,6 @@ use super::common::Unlocked;
 pub const NUM_MIO_PINS: usize = 78;
 pub const NUM_BANKS: usize = 3;
 
-#[allow(unused)]
-pub enum MioDriveSelect {
-    TwoMilliAmp = 0b00,
-    FourMilliAmp = 0b01,
-    EigthMilliAmp = 0b10,
-    TwelveMilliAmp = 0b11,
-}
-
 #[repr(C)]
 pub struct RegisterBlock {
     pub mio_pin: [MioPin; NUM_MIO_PINS],
