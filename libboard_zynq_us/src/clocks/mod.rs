@@ -4,12 +4,38 @@
 // Original authors: Astro, Harry Ho, pca006132
 // Modifications made for different clock sources, PLL configuration, and SLCRs
 
-use super::slcr::crf_apb::ApuClkSource;
-use super::slcr::{common::Unlocked, crf_apb, crl_apb};
-use libregister::{RegisterR, RegisterRW};
+use super::slcr::{
+    common::Unlocked,
+    crf_apb::{self, ApuClkSource},
+    crl_apb::{self, IoClkSource, RpuClkSource},
+    iou_slcr,
+};
+use libregister::{RegisterR, RegisterW};
 
 pub mod source;
 use source::*;
+
+// DS926 Table 38: PS Clocks Switching Characteristics
+#[allow(unused)]
+const TOP_SW_MAIN_MAX_FREQ: u32 = 533_000_000;
+#[allow(unused)]
+const TOP_SW_LSBUS_MAX_FREQ: u32 = 100_000_000;
+#[allow(unused)]
+const FPD_DMA_MAX_FREQ: u32 = 600_000_000;
+#[allow(unused)]
+const DP_DMA_MAX_FREQ: u32 = 600_000_000;
+#[allow(unused)]
+const LPD_SWITCH_MAX_FREQ: u32 = 500_000_000;
+#[allow(unused)]
+const LPD_LSBUS_MAX_FREQ: u32 = 100_000_000;
+// same for all the PLL_TO_(F|L)PDs
+#[allow(unused)]
+const XDOMAIN_MAX_FREQ: u32 = 533_000_000;
+// max PCAP freq is dependent on Vccint, see DS926 Table 26
+// for ZCU111 (ZU28DR -2E) Vccint = 0.85 V
+#[allow(unused)]
+#[cfg(feature = "target_zcu111")]
+const PCAP_MAX_FREQ: u32 = 200_000_000;
 
 #[derive(Debug, Clone)]
 pub struct Clocks {
@@ -26,9 +52,18 @@ pub struct Clocks {
 }
 
 impl Clocks {
+    /// Initialize PLLs and component clock sources
+    pub fn init() {
+        init_plls();
+        Self::init_xdomain_clocks();
+        Self::init_lpd_clocks();
+        Self::init_fpd_clocks();
+        Self::init_misc_clocks();
+    }
+
     pub fn get() -> Self {
-        let fpd_regs = crf_apb::RegisterBlock::slcr();
-        let lpd_regs = crl_apb::RegisterBlock::slcr();
+        let fpd_regs = crf_apb::RegisterBlock::crf_apb();
+        let lpd_regs = crl_apb::RegisterBlock::crl_apb();
         Clocks {
             apu: ApuPll::freq(&mut fpd_regs.apu_pll_ctrl),
             ddr: DdrPll::freq(&mut fpd_regs.ddr_pll_ctrl),
@@ -38,28 +73,236 @@ impl Clocks {
         }
     }
 
-    pub fn set_cpu_freq(target_freq: u32) {
-        let fpd_regs = crf_apb::RegisterBlock::slcr();
-        let apu_pll = ApuPll::freq(&mut fpd_regs.apu_pll_ctrl);
-        let mut div = 1u8;
-        while div < 63 && apu_pll / u32::from(div) > target_freq {
-            div += 1;
-        }
+    fn init_xdomain_clocks() {
+        // divisors for each PLL to the other power domain
+        let rpll_div0: u8 = 2; // 500 MHz
+        let iopll_div0: u8 = 3; // 500 MHz
+        let apll_div0: u8 = 3; // 400 MHz
+        let dpll_div0: u8 = 2; // 533 MHz
+        let vpll_div0: u8 = 3; // 500 MHz
 
-        crf_apb::RegisterBlock::unlocked(|slcr| {
-            slcr.apu_clk_ctrl
-                .modify(|_, w| w.srcsel(ApuClkSource::ApuPll).divisor0(div));
-        })
+        crl_apb::RegisterBlock::unlocked(|crl_apb| {
+            crl_apb
+                .rpu_pll_to_fpd_ctrl
+                .write(crl_apb::PllToFpdCtrl::zeroed().divisor0(rpll_div0));
+            crl_apb
+                .io_pll_to_fpd_ctrl
+                .write(crl_apb::PllToFpdCtrl::zeroed().divisor0(iopll_div0));
+        });
+
+        crf_apb::RegisterBlock::unlocked(|crf_apb| {
+            crf_apb
+                .apu_pll_to_lpd_ctrl
+                .write(crf_apb::PllToLpdCtrl::zeroed().divisor0(apll_div0));
+            crf_apb
+                .ddr_pll_to_lpd_ctrl
+                .write(crf_apb::PllToLpdCtrl::zeroed().divisor0(dpll_div0));
+            crf_apb
+                .video_pll_to_lpd_ctrl
+                .write(crf_apb::PllToLpdCtrl::zeroed().divisor0(vpll_div0));
+        });
     }
 
-    pub fn uart0_ref_clk(&self) -> u32 {
-        let lpd_regs = crl_apb::RegisterBlock::slcr();
-        self.uart_ref_clk(&mut lpd_regs.uart0_clk_ctrl)
+    fn init_lpd_clocks() {
+        // Initialize clock sources and divisors for LPD components
+        crl_apb::RegisterBlock::unlocked(|crl_apb| {
+            // Source: IO PLL
+            // 125 MHz
+            crl_apb.gem3_clk_ctrl.write(
+                crl_apb::GemClkCtrl::zeroed()
+                    .rx_clkact(true)
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(12)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 250 MHz
+            crl_apb.gem_tsu_clk_ctrl.write(
+                crl_apb::GemTsuClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(6)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 250 MHz
+            crl_apb.usb0_bus_clk_ctrl.write(
+                crl_apb::UsbClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(6)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 20 MHz
+            crl_apb.usb3_clk_ctrl.write(
+                crl_apb::UsbClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(3)
+                    .divisor0(25)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 125 MHz
+            crl_apb.qspi_clk_ctrl.write(
+                crl_apb::QSpiClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(12)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 187.5 MHz
+            crl_apb.sdio1_clk_ctrl.write(
+                crl_apb::SdioClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(8)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 50 MHz
+            crl_apb.uart0_clk_ctrl.write(
+                crl_apb::UartClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(30)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 50 MHz
+            crl_apb.uart1_clk_ctrl.write(
+                crl_apb::UartClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(30)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 100 MHz
+            crl_apb.i2c0_clk_ctrl.write(
+                crl_apb::I2cClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(15)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 100 MHz
+            crl_apb.i2c1_clk_ctrl.write(
+                crl_apb::I2cClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(15)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 187.5 MHz
+            crl_apb.pcap_clk_ctrl.write(
+                crl_apb::PcapClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(8)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // 100 MHz
+            crl_apb.pl0_clk_ctrl.write(
+                crl_apb::PlClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(15)
+                    .srcsel(IoClkSource::IoPll),
+            );
+            // IO PLL
+            crl_apb.dll_clk_ctrl.write(crl_apb::DllClkCtrl::zeroed());
+            // 100 MHz
+            crl_apb.timestamp_clk_ctrl.write(
+                crl_apb::TimestampClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(15)
+                    .srcsel(IoClkSource::IoPll),
+            );
+
+            // Source: RPU PLL
+            // 500 MHz
+            // Also the clock for OCM
+            crl_apb.rpu_clk_ctrl.write(
+                crl_apb::RpuClkCtrl::zeroed()
+                    // .clkact_core(true)
+                    .clkact(true)
+                    .divisor0(2)
+                    .srcsel(RpuClkSource::RpuPll),
+            );
+            // 250 MHz
+            crl_apb.iou_switch_clk_ctrl.write(
+                crl_apb::IouSwitchClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(4)
+                    .srcsel(RpuClkSource::RpuPll),
+            );
+            // 500 MHz
+            crl_apb.lpd_switch_clk_ctrl.write(
+                crl_apb::LpdSwitchClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(2)
+                    .srcsel(RpuClkSource::RpuPll),
+            );
+            // 100 MHz
+            crl_apb.lpd_lsbus_clk_ctrl.write(
+                crl_apb::LpdLsbusClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(10)
+                    .srcsel(RpuClkSource::RpuPll),
+            );
+            // 250 MHz
+            crl_apb.dbg_lpd_clk_ctrl.write(
+                crl_apb::DbgLpdClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(4)
+                    .srcsel(RpuClkSource::RpuPll),
+            );
+            // 500 MHz
+            crl_apb.lpd_dma_clk_ctrl.write(
+                crl_apb::LpdDmaClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(2)
+                    .srcsel(RpuClkSource::RpuPll),
+            );
+            // 50 MHz
+            crl_apb.ps_sysmon_clk_ctrl.write(
+                crl_apb::PsSysmonClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor1(1)
+                    .divisor0(20)
+                    .srcsel(RpuClkSource::RpuPll),
+            );
+        });
     }
 
-    pub fn uart1_ref_clk(&self) -> u32 {
-        let lpd_regs = crl_apb::RegisterBlock::slcr();
-        self.uart_ref_clk(&mut lpd_regs.uart1_clk_ctrl)
+    fn init_fpd_clocks() {
+        crf_apb::RegisterBlock::unlocked(|crf_apb| {
+            // Source: APU PLL
+            // 1200 MHz
+            crf_apb.apu_clk_ctrl.write(
+                crf_apb::ApuClkCtrl::zeroed()
+                    .clkact_half(true)
+                    .clkact_full(true)
+                    .divisor0(1)
+                    .srcsel(ApuClkSource::ApuPll),
+            );
+
+            // Source: DDR PLL
+            // 533 MHz
+            crf_apb
+                .ddr_clk_ctrl
+                .write(crf_apb::DdrClkCtrl::zeroed().divisor0(2).srcsel(0));
+            // 533 MHz
+            crf_apb.topsw_main_clk_ctrl.write(
+                crf_apb::TopswMainClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(2)
+                    .srcsel(3),
+            );
+
+            // Source: IO PLL to FPD
+            // 100 MHz
+            crf_apb.topsw_lsbus_clk_ctrl.write(
+                crf_apb::TopswLsbusClkCtrl::zeroed()
+                    .clkact(true)
+                    .divisor0(5)
+                    .srcsel(2),
+            );
+        });
     }
 
     fn uart_ref_clk(&self, uart_regs: &mut crl_apb::UartClkCtrl) -> u32 {
