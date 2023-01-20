@@ -305,17 +305,59 @@ impl Clocks {
         });
     }
 
-    fn uart_ref_clk(&self, uart_regs: &mut crl_apb::UartClkCtrl) -> u32 {
-        let uart_clk_ctrl = uart_regs.read();
-        let pll = match uart_clk_ctrl.srcsel() {
+    fn init_misc_clocks() {
+        iou_slcr::RegisterBlock::unlocked(|iou_slcr| {
+            iou_slcr.sdio_clk_ctrl.write(
+                iou_slcr::SdioClkCtrl::zeroed()
+                    .sdio1_fb_clk_sel(false)
+                    .sdio1_rx_src_sel(false), // MIO pin 51
+            );
+
+            // Use APB interconnect clock
+            iou_slcr
+                .iou_ttc_apb_clk
+                .write(iou_slcr::IouTtcApbClk::zeroed());
+        });
+
+        // TODO: system watchdog timers
+    }
+
+    /// Get source frequency from [crate::slcr::crl_apb::IoClkSource]
+    fn io_clk_source_freq(&self, srcsel: crl_apb::IoClkSource) -> u32 {
+        match srcsel {
             crl_apb::IoClkSource::IoPll => self.io,
             crl_apb::IoClkSource::RpuPll => self.rpu,
             crl_apb::IoClkSource::DdrPllToLpd => {
-                let fpd_regs = crf_apb::RegisterBlock::slcr();
+                let fpd_regs = crf_apb::RegisterBlock::crf_apb();
                 let divisor = u32::from(fpd_regs.ddr_pll_to_lpd_ctrl.read().divisor0());
                 self.ddr / divisor
             }
-        };
-        pll / (u32::from(uart_clk_ctrl.divisor0()) * u32::from(uart_clk_ctrl.divisor1()))
+        }
+    }
+
+    fn uart_ref_clk(&self, uart_clk_ctrl: crl_apb::uart_clk_ctrl::Read) -> u32 {
+        let source_freq = self.io_clk_source_freq(uart_clk_ctrl.srcsel());
+        source_freq / (u32::from(uart_clk_ctrl.divisor0()) * u32::from(uart_clk_ctrl.divisor1()))
+    }
+
+    pub fn uart0_ref_clk(&self) -> u32 {
+        self.uart_ref_clk(crl_apb::RegisterBlock::crl_apb().uart0_clk_ctrl.read())
+    }
+
+    pub fn uart1_ref_clk(&self) -> u32 {
+        self.uart_ref_clk(crl_apb::RegisterBlock::crl_apb().uart1_clk_ctrl.read())
+    }
+
+    fn i2c_ref_clk(&self, i2c_clk_ctrl: crl_apb::i2c_clk_ctrl::Read) -> u32 {
+        let source_freq = self.io_clk_source_freq(i2c_clk_ctrl.srcsel());
+        source_freq / (u32::from(i2c_clk_ctrl.divisor0()) * u32::from(i2c_clk_ctrl.divisor1()))
+    }
+
+    pub fn i2c0_ref_clk(&self) -> u32 {
+        self.i2c_ref_clk(crl_apb::RegisterBlock::crl_apb().i2c0_clk_ctrl.read())
+    }
+
+    pub fn i2c1_ref_clk(&self) -> u32 {
+        self.i2c_ref_clk(crl_apb::RegisterBlock::crl_apb().i2c0_clk_ctrl.read())
     }
 }
