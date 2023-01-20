@@ -5,8 +5,11 @@
 // Modifications made for different clock sources, FDIV params, PLL configuration, and SLCRs
 
 use crate::slcr::common::{PllCfg, PllCtrl, PllFracCfg, Unlocked};
-use crate::slcr::{crf_apb, crl_apb};
-use libregister::{RegisterR, RegisterRW};
+use crate::slcr::{
+    crf_apb,
+    crl_apb::{self, PsSysmonClkCtrl, RpuClkSource},
+};
+use libregister::{RegisterR, RegisterRW, RegisterW};
 
 #[cfg(feature = "target_zcu111")]
 pub const PS_REF_CLK: u32 = 33_333_000;
@@ -15,12 +18,42 @@ pub const PS_REF_CLK: u32 = 33_333_000;
 // AUX_REF_CLK: from PL
 // GTR_REF_CLK
 
-// DS926 Table: PS PLL Switching Characteristics (same for both speed grades)
+// DS926 Table 36: PS PLL Switching Characteristics (same for both speed grades)
 // const PS_PLL_MAX_LOCK_TIME: f32 = 100e-6; // 100 us
 const PS_PLL_MAX_OUT_FREQ: u32 = 1_600_000_000;
 const PS_PLL_MIN_OUT_FREQ: u32 = 750_000_000;
 // const PS_PLL_MAX_VCO_FREQ: u32 = 3_000_000_000;
 const PS_PLL_MIN_VCO_FREQ: u32 = 1_500_000_000;
+
+// Default PLL frequencies
+pub const RPU_PLL_FREQ: u32 = 1_000_000_000;
+pub const IO_PLL_FREQ: u32 = 1_500_000_000;
+pub const APU_PLL_FREQ: u32 = 1_200_000_000;
+pub const DDR_PLL_FREQ: u32 = 1_066_666_666;
+pub const VIDEO_PLL_FREQ: u32 = 1_500_000_000;
+
+pub fn init_plls() {
+    crl_apb::RegisterBlock::unlocked(|crl_apb| {
+        crl_apb.ps_sysmon_clk_ctrl.write(
+            PsSysmonClkCtrl::zeroed()
+                .divisor1(1)
+                .divisor0(35)
+                .srcsel(RpuClkSource::IoPll)
+                .clkact(true),
+        );
+        crl_apb.peri_rst_ctrl.modify(|_, w| w.qspi_rst(true));
+    });
+    RpuPll::setup(RPU_PLL_FREQ);
+    crl_apb::RegisterBlock::unlocked(|crl_apb| {
+        crl_apb
+            .ps_sysmon_clk_ctrl
+            .modify(|_, w| w.srcsel(RpuClkSource::RpuPll));
+    });
+    IoPll::setup(IO_PLL_FREQ);
+    ApuPll::setup(APU_PLL_FREQ);
+    DdrPll::setup(DDR_PLL_FREQ);
+    VideoPll::setup(VIDEO_PLL_FREQ);
+}
 
 /// UG1085 table 37-1
 /// (pll_fdiv_max, (pll_cp, pll_res, lfhf, lock_dly, lock_cnt))
@@ -159,7 +192,7 @@ impl ClockSource<crf_apb::RegisterBlock> for ApuPll {
 
     #[inline]
     fn pll_locked() -> bool {
-        let slcr = crf_apb::RegisterBlock::slcr();
+        let slcr = crf_apb::RegisterBlock::crf_apb();
         slcr.pll_status.read().apu_pll_lock()
     }
 
@@ -185,7 +218,7 @@ impl ClockSource<crf_apb::RegisterBlock> for DdrPll {
 
     #[inline]
     fn pll_locked() -> bool {
-        let slcr = crf_apb::RegisterBlock::slcr();
+        let slcr = crf_apb::RegisterBlock::crf_apb();
         slcr.pll_status.read().ddr_pll_lock()
     }
 
@@ -211,7 +244,7 @@ impl ClockSource<crf_apb::RegisterBlock> for VideoPll {
 
     #[inline]
     fn pll_locked() -> bool {
-        let slcr = crf_apb::RegisterBlock::slcr();
+        let slcr = crf_apb::RegisterBlock::crf_apb();
         slcr.pll_status.read().video_pll_lock()
     }
 
@@ -237,7 +270,7 @@ impl ClockSource<crl_apb::RegisterBlock> for IoPll {
 
     #[inline]
     fn pll_locked() -> bool {
-        let slcr = crl_apb::RegisterBlock::slcr();
+        let slcr = crl_apb::RegisterBlock::crl_apb();
         slcr.pll_status.read().io_pll_lock()
     }
 
@@ -255,15 +288,15 @@ impl ClockSource<crl_apb::RegisterBlock> for RpuPll {
         slcr: &mut crl_apb::RegisterBlock,
     ) -> (&mut PllCtrl, &mut PllCfg, &mut PllFracCfg) {
         (
-            &mut slcr.io_pll_ctrl,
-            &mut slcr.io_pll_cfg,
-            &mut slcr.io_pll_frac_cfg,
+            &mut slcr.rpu_pll_ctrl,
+            &mut slcr.rpu_pll_cfg,
+            &mut slcr.rpu_pll_frac_cfg,
         )
     }
 
     #[inline]
     fn pll_locked() -> bool {
-        let slcr = crl_apb::RegisterBlock::slcr();
+        let slcr = crl_apb::RegisterBlock::crl_apb();
         slcr.pll_status.read().rpu_pll_lock()
     }
 
