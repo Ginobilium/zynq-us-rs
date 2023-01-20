@@ -8,12 +8,12 @@ pub struct RegisterBlock {
     pub status: Status,
     pub addr: Addr,
     pub data: Data,
-    pub isr: ISR,
+    pub interrupt_status: InterruptStatus,
     pub tx_size: TxSize,
     pub slv_mon_pause: SlvMonPause,
     pub timeout: Timeout,
     pub interrupt_mask: InterruptMask,
-    pub interrupt_enable: InterruptEnable,
+    pub interrupt_enable: crate::i2c::regs::InterruptEnable,
     pub interrupt_disable: InterruptDisable,
     pub glitch_filter: GlitchFilter,
 }
@@ -53,16 +53,16 @@ register_bits!(addr, addr, u16, 0, 9);
 register!(data, Data, RW, u32);
 register_bits!(data, data, u8, 0, 7);
 
-register!(isr, ISR, RW, u32);
-register_bit!(isr, arb_lost, 9, WTC);
-register_bit!(isr, rx_underflow, 7, WTC);
-register_bit!(isr, tx_overflow, 6, WTC);
-register_bit!(isr, rx_overflow, 5, WTC);
-register_bit!(isr, slv_ready, 4, WTC);
-register_bit!(isr, timeout, 3, WTC);
-register_bit!(isr, nack, 2, WTC);
-register_bit!(isr, data, 1, WTC);
-register_bit!(isr, tx_complete, 0, WTC);
+register!(interrupt_status, InterruptStatus, RW, u32);
+register_bit!(interrupt_status, arb_lost, 9, WTC);
+register_bit!(interrupt_status, rx_underflow, 7, WTC);
+register_bit!(interrupt_status, tx_overflow, 6, WTC);
+register_bit!(interrupt_status, rx_overflow, 5, WTC);
+register_bit!(interrupt_status, slv_ready, 4, WTC);
+register_bit!(interrupt_status, timeout, 3, WTC);
+register_bit!(interrupt_status, nack, 2, WTC);
+register_bit!(interrupt_status, data, 1, WTC);
+register_bit!(interrupt_status, tx_complete, 0, WTC);
 
 register!(tx_size, TxSize, RW, u32);
 register_bits!(tx_size, tx_size, u8, 0, 7);
@@ -84,7 +84,7 @@ register_bit!(interrupt_mask, nack, 2);
 register_bit!(interrupt_mask, data, 1);
 register_bit!(interrupt_mask, tx_complete, 0);
 
-register!(interrupt_enable, InterruptEnable, RO, u32);
+register!(interrupt_enable, InterruptEnable, WO, u32);
 register_bit!(interrupt_enable, arb_lost, 9);
 register_bit!(interrupt_enable, rx_underflow, 7);
 register_bit!(interrupt_enable, tx_overflow, 6);
@@ -95,7 +95,7 @@ register_bit!(interrupt_enable, nack, 2);
 register_bit!(interrupt_enable, data, 1);
 register_bit!(interrupt_enable, tx_complete, 0);
 
-register!(interrupt_disable, InterruptDisable, RO, u32);
+register!(interrupt_disable, InterruptDisable, WO, u32);
 register_bit!(interrupt_disable, arb_lost, 9);
 register_bit!(interrupt_disable, rx_underflow, 7);
 register_bit!(interrupt_disable, tx_overflow, 6);
