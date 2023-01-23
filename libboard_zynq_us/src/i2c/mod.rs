@@ -1,6 +1,6 @@
 //! I2C Driver and Registers
 use libregister::{RegisterR, RegisterRW, RegisterW};
-use log::debug;
+use log::{debug, error};
 
 use super::clocks::Clocks;
 use super::slcr::{common::Unlocked, crl_apb};
@@ -187,6 +187,7 @@ impl I2C {
 
             if Self::tx_error(&isr_read) {
                 // TODO: self.reset()?
+                error!("Failed to complete transaction. Last read value of ISR: {:#X}", isr_read.inner);
                 return Err(isr_read.inner);
             }
         }
@@ -208,6 +209,7 @@ impl I2C {
         }
 
         if Self::tx_error(&isr_read) {
+            error!("Failed to complete transaction. Last read value of ISR: {:#X}", isr_read.inner);
             return Err(isr_read.inner);
         }
 
@@ -271,7 +273,7 @@ impl I2C {
 
             if Self::rx_error(&isr_read) {
                 // TODO: self.reset()?
-                // TODO: log
+                error!("Failed to complete transaction. Last read value of ISR: {:#X}", isr_read.inner);
                 return Err(isr_read.inner);
             }
         }
