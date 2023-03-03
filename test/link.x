@@ -1,4 +1,4 @@
-ENTRY(_boot_cores);
+ENTRY(vector_table);
 
 MEMORY
 {
@@ -14,17 +14,17 @@ SECTIONS
         *(.text.boot);
         *(.text .text.*);
     } > OCM
- 
+
     .rodata : ALIGN(64)
     {
         *(.rodata .rodata.*);
     } > OCM
- 
+
     .data : ALIGN(64)
     {
         *(.data .data.*);
     } > OCM
- 
+
     .bss (NOLOAD) : ALIGN(64)
     {
         __bss_start = .;
@@ -33,9 +33,9 @@ SECTIONS
         __bss_end = .;
     } > OCM
 
-    .stack0 (NOLOAD) : ALIGN(128) {
+    .stack0 (NOLOAD) : ALIGN(64) {
         __stack0_end = .;
-        . = ORIGIN(OCM) + LENGTH(OCM) - 128;
+        . = ORIGIN(OCM) + LENGTH(OCM) - 64;
         __stack0_start = .;
     } > OCM
 
