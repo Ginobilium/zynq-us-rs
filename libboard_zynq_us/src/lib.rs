@@ -1,4 +1,6 @@
 #![no_std]
+#![feature(more_qualified_paths)]
+#![feature(int_roundings)]
 
 pub mod axi_hp;
 pub mod clocks;
