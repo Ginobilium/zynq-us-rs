@@ -5,6 +5,64 @@ use core::convert::TryInto;
 use libm::ceilf;
 use log::debug;
 
+use crate::i2c::{I2C, MUX_ADDR};
+
+// select bits for SODIMM
+#[cfg(feature = "target_zcu111")]
+const I2C_MUX_SEL: u8 = 0x08;
+// SODIMM control addresses
+#[cfg(feature = "target_zcu111")]
+const I2C_CTRL_ADDR_LO: u16 = 0x36;
+#[cfg(feature = "target_zcu111")]
+const I2C_CTRL_ADDR_HI: u16 = 0x37;
+// SODIMM address
+#[cfg(feature = "target_zcu111")]
+const I2C_ADDR: u16 = 0x51;
+
+pub fn read_spd_eeprom() -> GeneralConfig {
+    let mut spd_data = [0u8; 512];
+    let mut i2c = I2C::i2c1();
+    // set clock
+    i2c.set_sclk(100_000);
+    // set mux to DDR
+    i2c.master_write_polled(MUX_ADDR, 1, &[I2C_MUX_SEL])
+        .unwrap();
+    while i2c.busy() {}
+    // read back selection to confirm
+    i2c.master_read_polled(MUX_ADDR, 1, &mut spd_data).unwrap();
+    assert!(spd_data[0] == I2C_MUX_SEL, "Error in I2C mux selection");
+
+    // enable access to lower page
+    i2c.master_write_polled(I2C_CTRL_ADDR_LO, 1, &[0x00])
+        .unwrap();
+    while i2c.busy() {}
+
+    // set start addr
+    i2c.master_write_polled(I2C_ADDR, 1, &[0x00]).unwrap();
+    while i2c.busy() {}
+
+    // read lower page
+    i2c.master_read_polled(I2C_ADDR, 256, &mut spd_data[..256])
+        .unwrap();
+    while i2c.busy() {}
+
+    // enable access to upper page
+    i2c.master_write_polled(I2C_CTRL_ADDR_HI, 1, &[0x01])
+        .unwrap();
+    while i2c.busy() {}
+
+    // set start addr
+    i2c.master_write_polled(I2C_ADDR, 1, &[0x00]).unwrap();
+    while i2c.busy() {}
+
+    // read upper page
+    i2c.master_read_polled(I2C_ADDR, 256, &mut spd_data[256..])
+        .unwrap();
+    while i2c.busy() {}
+
+    GeneralConfig::from_spd_data(&spd_data)
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum DeviceType {
     Ddr3,
@@ -144,7 +202,7 @@ pub struct GeneralConfig {
 /// Bytes 128-255
 /// Annex L.1: Module Specific Bytes for Unbuffered Memory Module Types
 /// UDIMM and SO-DIMM
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct UnbufferedConfig {
     // 128
     pub raw_card_extension: u8,    // 7-5
