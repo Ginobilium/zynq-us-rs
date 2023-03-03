@@ -1,7 +1,7 @@
+///! FPD clock and reset control
 use libregister::{
     register, register_at, register_bit, register_bits, register_bits_typed, RegisterW,
 };
-///! FPD clock and reset control
 use volatile_register::{RO, RW, WO};
 
 use super::common::{PllCfg, PllCtrl, PllFracCfg, Unlocked, WProt};
@@ -37,25 +37,25 @@ pub struct RegisterBlock {
     pub video_pll_to_lpd_ctrl: PllToLpdCtrl,
     unused1: [u32; 3],
     pub apu_clk_ctrl: ApuClkCtrl,
-    pub dbg_trace_clk_ctrl: RW<u32>,
-    pub dbg_fpd_clk_ctrl: RW<u32>,
+    pub dbg_trace_clk_ctrl: DbgTraceClkCtrl,
+    pub dbg_fpd_clk_ctrl: DbgFpdClkCtrl,
     unused2: [u32; 1],
-    pub dp_video_clk_ctrl: RW<u32>,
-    pub dp_audio_clk_ctrl: RW<u32>,
+    pub dp_video_clk_ctrl: DpVideoClkCtrl,
+    pub dp_audio_clk_ctrl: DpAudioClkCtrl,
     unused3: [u32; 1],
-    pub dp_sys_clk_ctrl: RW<u32>,
+    pub dp_sys_clk_ctrl: DpSysClkCtrl,
     pub ddr_clk_ctrl: DdrClkCtrl,
-    pub gpu_clk_ctrl: RW<u32>,
+    pub gpu_clk_ctrl: GpuClkCtrl,
     unused4: [u32; 6],
-    pub sata_clk_ctrl: RW<u32>,
+    pub sata_clk_ctrl: SataClkCtrl,
     unused5: [u32; 4],
-    pub pcie_clk_ctrl: RW<u32>,
-    pub fpd_dma_clk_ctrl: RW<u32>,
-    pub dp_dma_clk_ctrl: RW<u32>,
-    pub topsw_main_clk_ctrl: RW<u32>,
-    pub topsw_lsbus_clk_ctrl: RW<u32>,
+    pub pcie_clk_ctrl: PcieClkCtrl,
+    pub fpd_dma_clk_ctrl: FpdDmaClkCtrl,
+    pub dp_dma_clk_ctrl: DpDmaClkCtrl,
+    pub topsw_main_clk_ctrl: TopswMainClkCtrl,
+    pub topsw_lsbus_clk_ctrl: TopswLsbusClkCtrl,
     unused6: [u32; 12],
-    pub dbg_tstmp_clk_ctrl: RW<u32>,
+    pub dbg_tstmp_clk_ctrl: DbgTimestampClkCtrl,
     unused7: [u32; 1],
     pub rst_fpd_top: RstFpdTop,
     pub rst_fpd_apu: RstFpdApu,
@@ -95,6 +95,45 @@ register_bits!(ddr_clk_ctrl, divisor0, u8, 8, 13);
 // 000: DDR PLL
 // 001: Video PLL
 register_bits!(ddr_clk_ctrl, srcsel, u8, 0, 2);
+
+macro_rules! single_div_clk_reg {
+    ($mod_name: ident, $struct_name: ident) => {
+        register!($mod_name, $struct_name, RW, u32);
+        register_bit!($mod_name, clkact, 24);
+        register_bits!($mod_name, divisor0, u8, 8, 13);
+        register_bits!($mod_name, srcsel, u8, 0, 2);
+    };
+}
+
+single_div_clk_reg!(dbg_trace_clk_ctrl, DbgTraceClkCtrl);
+single_div_clk_reg!(dbg_fpd_clk_ctrl, DbgFpdClkCtrl);
+single_div_clk_reg!(gpu_clk_ctrl, GpuClkCtrl);
+register_bit!(gpu_clk_ctrl, pp1_clkact, 26);
+register_bit!(gpu_clk_ctrl, pp0_clkact, 25);
+single_div_clk_reg!(sata_clk_ctrl, SataClkCtrl);
+single_div_clk_reg!(pcie_clk_ctrl, PcieClkCtrl);
+single_div_clk_reg!(fpd_dma_clk_ctrl, FpdDmaClkCtrl);
+single_div_clk_reg!(dp_dma_clk_ctrl, DpDmaClkCtrl);
+single_div_clk_reg!(topsw_main_clk_ctrl, TopswMainClkCtrl);
+single_div_clk_reg!(topsw_lsbus_clk_ctrl, TopswLsbusClkCtrl);
+
+macro_rules! dual_div_clk_reg {
+    ($mod_name: ident, $struct_name: ident) => {
+        register!($mod_name, $struct_name, RW, u32);
+        register_bit!($mod_name, clkact, 24);
+        register_bits!($mod_name, divisor1, u8, 16, 21);
+        register_bits!($mod_name, divisor0, u8, 8, 13);
+        register_bits!($mod_name, srcsel, u8, 0, 2);
+    };
+}
+
+dual_div_clk_reg!(dp_video_clk_ctrl, DpVideoClkCtrl);
+dual_div_clk_reg!(dp_audio_clk_ctrl, DpAudioClkCtrl);
+dual_div_clk_reg!(dp_sys_clk_ctrl, DpSysClkCtrl);
+
+register!(dbg_tstmp_clk_ctrl, DbgTimestampClkCtrl, RW, u32);
+register_bits!(dbg_tstmp_clk_ctrl, divisor0, u8, 8, 13);
+register_bits!(dbg_tstmp_clk_ctrl, srcsel, u8, 0, 2);
 
 register!(rst_fpd_top, RstFpdTop, RW, u32);
 register_bit!(rst_fpd_top, pcie_cfg_reset, 19);
