@@ -16,5 +16,4 @@ volatile-register = "0.2"
 bit_field = "0.10"
 log = "0.4"
 r0 = "0.2"
-panic-abort = "0.3"
 libregister = { git = "https://git.m-labs.hk/bradbqc/zynq-rs", branch = "feature/zcu111" }
