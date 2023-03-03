@@ -8,3 +8,4 @@ pub mod interrupts;
 pub mod slcr;
 pub mod stdio;
 pub mod uart;
+mod util;
