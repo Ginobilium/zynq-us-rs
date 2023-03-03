@@ -25,6 +25,8 @@ const MAX_SCLK_FREQ: u32 = 400_000;
 // Max divisors (note: actual divisor is register value + 1)
 const MAX_DIV_A: u32 = 4;
 const MAX_DIV_B: u32 = 64;
+// Magic number tucked away in a note in UG1085 (pg. 631)
+const CLK_DIV_BUILTIN: u32 = 22;
 
 pub struct I2C {
     regs: &'static mut regs::RegisterBlock,
@@ -57,6 +59,17 @@ impl I2C {
             ref_clk: Clocks::get().i2c1_ref_clk(),
         };
         self_.reset(false);
+        // glitch filter set to number of clock cycles that equals 50 ns (1 / 20 MHz)
+        let num_cycles = div_round_closest(self_.ref_clk, 20_000_000);
+        // 4 bit field
+        assert!(
+            num_cycles < 16,
+            "Reference clock is too fast to configure glitch filter"
+        );
+        self_
+            .regs
+            .glitch_filter
+            .write(regs::GlitchFilter::zeroed().glitch_filter(num_cycles as u8)); // 1 / 50 ns
         self_
     }
 
@@ -65,25 +78,27 @@ impl I2C {
     /// UG1085 Table 22-3: I2C Reset
     ///
     /// * `restore_interrupts`: `bool` - whether to restore previously-enabled interrupts after reset
-    pub fn reset(&mut self, restore_interrupts: bool) {
-        // save current interrupt config before disabling interrupts
-        let imr: u32 = self.regs.interrupt_mask.read().inner;
+    pub fn reset(&mut self, _restore_interrupts: bool) {
+        // disable and clear interrupts
         self.disable_interrupts();
-
-        // clear FIFO
-        self.regs
-            .control
-            .write(regs::Control::zeroed().clear_fifo(true));
-
-        // clear interrupts
         self.clear_interrupt_status();
 
-        // restore enabled interrupts
-        if restore_interrupts {
-            self.regs
-                .interrupt_enable
-                .write(regs::interrupt_enable::Write { inner: imr });
-        }
+        // clear FIFO
+        // self.clear_fifo();
+        self.regs
+            .control
+            // .write(regs::Control::zeroed());
+            .write(regs::Control::zeroed().clear_fifo(true));
+
+        // set timeout to max value
+        self.regs
+            .timeout
+            .write(regs::Timeout::zeroed().timeout(0xff));
+
+        // clear other registers
+        self.regs.tx_size.write(regs::TxSize::zeroed());
+        // self.regs.addr.write(regs::Addr::zeroed());
+        self.regs.control.write(regs::Control::zeroed());
     }
 
     pub fn set_sclk(&mut self, mut freq: u32) {
@@ -91,11 +106,6 @@ impl I2C {
             freq <= MAX_SCLK_FREQ,
             "SCL frequency cannot exceed {} Hz",
             MAX_SCLK_FREQ
-        );
-        let target_div = div_round_closest(self.ref_clk, freq);
-        assert!(
-            target_div <= (MAX_DIV_A * MAX_DIV_B),
-            "Target frequency not achievable with current reference clock"
         );
         // from the FSBL (and I dare not tempt fate):
         // > If frequency 400KHz is selected, 384.6KHz should be set.
@@ -107,13 +117,22 @@ impl I2C {
             freq = 90_000;
         }
 
+        let target_div = div_round_closest(self.ref_clk, freq * CLK_DIV_BUILTIN);
+        assert!(
+            target_div <= (MAX_DIV_A * MAX_DIV_B),
+            "Target frequency not achievable with current reference clock"
+        );
+
+        // the above assertion guarantees we can reach <= the target frequency (and > 0 unless the
+        // ref clock is 0, which shouldn't be possible), so max error should be guaranteed < freq
         let mut best_error_hz = freq;
         let mut best_div_a: u32 = 0;
         let mut best_div_b: u32 = 0;
 
         for div_a in 1..=MAX_DIV_A {
             let div_b = div_round_closest(target_div, div_a).min(MAX_DIV_B);
-            let error_hz = div_round_closest(self.ref_clk, div_a * div_b).abs_diff(freq);
+            let error_hz =
+                div_round_closest(self.ref_clk, div_a * div_b * CLK_DIV_BUILTIN).abs_diff(freq);
             if error_hz < best_error_hz {
                 best_div_a = div_a;
                 best_div_b = div_b;
@@ -131,19 +150,20 @@ impl I2C {
             w.divisor_a((best_div_a - 1) as u8)
                 .divisor_b((best_div_b - 1) as u8)
         });
-        // TODO: set glitch filter?
     }
 
     /// Perform common setup steps for master mode.
     ///
     /// Sets the interface to master mode, clears the FIFO & interrupt status, sets RX/TX according
-    /// to the `rx_en` argument, and disables all interrupts.
+    /// to the `rx_en` argument, ACK enable, normal addressing mode, and disables all interrupts.
     pub fn master_setup(&mut self, rx_en: bool) {
-        self.set_interface_mode(true);
-        self.set_ack_en(true);
-        self.clear_fifo();
-        self.clear_interrupt_status();
-        self.set_rx_en(rx_en);
+        self.regs.control.modify(|_, w| {
+            w.clear_fifo(true)
+                .ack_en(true)
+                .addr_mode(true)
+                .interface_mode(true)
+                .rx_en(rx_en)
+        });
         self.disable_interrupts();
     }
 
@@ -165,7 +185,7 @@ impl I2C {
 
         self.master_setup(false);
 
-        self.regs.addr.modify(|_, w| w.addr(addr));
+        // self.regs.addr.modify(|_, w| w.addr(addr));
 
         let mut isr_read: regs::interrupt_status::Read;
         // send the first n_fill * FIFO_SIZE chunks
@@ -177,6 +197,8 @@ impl I2C {
                     .modify(|_, w| w.data(data[(i * FIFO_SIZE + j) as usize]));
             }
 
+            self.regs.addr.modify(|_, w| w.addr(addr));
+
             // wait for empty
             loop {
                 isr_read = self.regs.interrupt_status.read();
@@ -187,18 +209,29 @@ impl I2C {
 
             if Self::tx_error(&isr_read) {
                 // TODO: self.reset()?
-                error!("Failed to complete transaction. Last read value of ISR: {:#X}", isr_read.inner);
+                error!(
+                    "Failed to complete transaction. Last read value of ISR: {:#X}",
+                    isr_read.inner
+                );
                 return Err(isr_read.inner);
             }
         }
 
         // TODO: set hold to false?
         // send remainder (or the entire slice if smaller than FIFO_SIZE)
+        self.clear_interrupt_status();
         for i in 0..rem {
+            debug!(
+                "sending data: {:#X}",
+                data[(n_fill * FIFO_SIZE + i) as usize]
+            );
             self.regs
                 .data
                 .modify(|_, w| w.data(data[(n_fill * FIFO_SIZE + i) as usize]));
         }
+
+        debug!("addr: {:#X}", addr);
+        self.regs.addr.modify(|_, w| w.addr(addr));
 
         // wait for tx completion
         loop {
@@ -209,7 +242,10 @@ impl I2C {
         }
 
         if Self::tx_error(&isr_read) {
-            error!("Failed to complete transaction. Last read value of ISR: {:#X}", isr_read.inner);
+            error!(
+                "Failed to complete transaction. Last read value of ISR: {:#X}",
+                isr_read.inner
+            );
             return Err(isr_read.inner);
         }
 
@@ -229,8 +265,8 @@ impl I2C {
     /// * `Err(u32)` containing the last read value of [crate::i2c::regs::interrupt_status] if the transfer failed
     pub fn master_read_polled(
         &mut self,
-        addr: u16, // TODO: make option and default to buffer size
-        size: u16,
+        addr: u16,
+        size: u16, // TODO: make option and default to buffer size(?)
         rx_buffer: &mut [u8],
     ) -> Result<(), u32> {
         assert!(
@@ -239,45 +275,59 @@ impl I2C {
             rx_buffer.len(),
             size
         );
-        self.master_setup(true);
-
         let mut hold = size > FIFO_SIZE;
         self.regs.control.modify(|_, w| w.hold(hold));
 
-        self.regs.addr.write(regs::Addr::zeroed().addr(addr));
+        self.master_setup(true);
+
+        self.clear_interrupt_status();
 
         // total (not per-chunk) bytes remaining
         let mut remaining_bytes = size;
-        let mut isr_read: regs::interrupt_status::Read;
-        while remaining_bytes > 0 {
-            debug!("Remaining bytes: {}", remaining_bytes);
-            if remaining_bytes > MAX_TX as u16 {
-                self.regs
-                    .tx_size
-                    .write(regs::TxSize::zeroed().tx_size(MAX_TX));
-            } else {
-                self.regs
-                    .tx_size
-                    .write(regs::TxSize::zeroed().tx_size(remaining_bytes as u8));
-            }
-            // TODO: rewrite addr for each chunk?
-            isr_read = self.regs.interrupt_status.read();
-            while self.regs.status.read().rx_data_valid() && !Self::rx_error(&isr_read) {
+        let mut cur_chunk = if size > MAX_TX as u16 {
+            MAX_TX
+        } else {
+            size as u8
+        };
+        self.regs
+            .tx_size
+            .write(regs::TxSize::zeroed().tx_size(cur_chunk));
+        self.regs.addr.write(regs::Addr::zeroed().addr(addr));
+
+        let mut isr_read = self.regs.interrupt_status.read();
+        while remaining_bytes > 0 && !Self::rx_error(&isr_read) {
+            while self.regs.status.read().rx_data_valid() {
                 rx_buffer[(size - remaining_bytes) as usize] = self.regs.data.read().data();
                 remaining_bytes -= 1;
-                if hold && remaining_bytes < FIFO_SIZE {
+                cur_chunk -= 1;
+                if hold && remaining_bytes < DATA_INTR_THRESH as u16 {
                     hold = false;
                     self.regs.control.modify(|_, w| w.hold(false));
                 }
             }
-
-            if Self::rx_error(&isr_read) {
-                // TODO: self.reset()?
-                error!("Failed to complete transaction. Last read value of ISR: {:#X}", isr_read.inner);
-                return Err(isr_read.inner);
+            if cur_chunk == 0 && remaining_bytes > 0 {
+                self.clear_interrupt_status();
+                self.regs.addr.write(regs::Addr::zeroed().addr(addr));
+                cur_chunk = if remaining_bytes > MAX_TX as u16 {
+                    MAX_TX
+                } else {
+                    remaining_bytes as u8
+                };
+                self.regs
+                    .tx_size
+                    .write(regs::TxSize::zeroed().tx_size(cur_chunk));
             }
+            isr_read = self.regs.interrupt_status.read();
         }
 
+        if Self::rx_error(&isr_read) {
+            // TODO: self.reset()?
+            error!(
+                "Failed to complete transaction. Last read value of ISR: {:#X}",
+                isr_read.inner
+            );
+            return Err(isr_read.inner);
+        }
         Ok(())
     }
 
@@ -370,4 +420,3 @@ impl I2C {
         self.regs.status.read().bus_active()
     }
 }
-

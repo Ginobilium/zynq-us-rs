@@ -13,7 +13,7 @@ pub struct RegisterBlock {
     pub slv_mon_pause: SlvMonPause,
     pub timeout: Timeout,
     pub interrupt_mask: InterruptMask,
-    pub interrupt_enable: crate::i2c::regs::InterruptEnable,
+    pub interrupt_enable: InterruptEnable,
     pub interrupt_disable: InterruptDisable,
     pub glitch_filter: GlitchFilter,
 }
