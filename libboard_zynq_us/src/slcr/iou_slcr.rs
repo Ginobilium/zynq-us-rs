@@ -11,10 +11,11 @@ pub const NUM_BANKS: usize = 3;
 pub struct RegisterBlock {
     pub mio_pin: [MioPin; NUM_MIO_PINS],
     pub bank_csr: [BankCSR; NUM_BANKS],
-    unused1: [u32; 29],
+    unused0: [u32; 29],
     pub mio_loopback: RW<u32>,
     pub mio_tri_enable: [MioTriEnable; NUM_BANKS],
-    pub wdt_clk_sel: RW<u32>, // 0 = internal APB clock, 1 = external
+    unused1: [u32; 60],
+    pub wdt_clk_sel: RW<u32>,
     pub can_mio_ctrl: RW<u32>,
     pub gem_clk_ctrl: RW<u32>,
     pub sdio_clk_ctrl: SdioClkCtrl,
@@ -30,9 +31,9 @@ pub struct RegisterBlock {
     pub sd_sdr12_preset: RW<u32>,
     pub sd_sdr25_preset: RW<u32>,
     pub sd_sdr50_preset: RW<u32>,
-    unused2: [u32; 1],
     pub sd_sdr104_preset: RW<u32>,
     pub sd_ddr50_preset: RW<u32>,
+    unused2: [u32; 1],
     pub sd_max_cur_18: RW<u32>,
     pub sd_max_cur_30: RW<u32>,
     pub sd_max_cur_33: RW<u32>,
@@ -40,10 +41,10 @@ pub struct RegisterBlock {
     pub sd_cdn_ctrl: RW<u32>,
     pub gem_ctrl: RW<u32>,
     unused3: [u32; 7],
-    pub iou_ttc_apb_clk: RW<u32>,
+    pub iou_ttc_apb_clk: IouTtcApbClk,
     unused4: [u32; 3],
     pub iou_tapdly_bypass: RW<u32>,
-    unused5: [u32; 3],
+    unused5: [u32; 27],
     pub iou_coherent_ctrl: RW<u32>,
     pub video_pss_clk_sel: RW<u32>,
     pub iou_interconnect_route: RW<u32>,
@@ -153,6 +154,16 @@ register_bit!(sdio_clk_ctrl, sdio1_rx_src_sel, 17);
 register_bit!(sdio_clk_ctrl, sdio0_fb_clk_sel, 2);
 // 00: MIO 22, 01: MIO 38, 1x: MIO 64
 register_bits!(sdio_clk_ctrl, sdio0_rx_src_sel, u8, 0, 1);
+
+register!(iou_ttc_apb_clk, IouTtcApbClk, RW, u32);
+// 00: APB Interconnect clock (LPD_APB_CLK, lpd_lsbus_clk)
+// 01: Device Pin, PS_REF_CLK
+// 10: RPU clock (RPU_CLK, cpu_r5_clk)
+// 11: reserved
+register_bits!(iou_ttc_apb_clk, ttc3_sel, u8, 6, 7);
+register_bits!(iou_ttc_apb_clk, ttc2_sel, u8, 4, 5);
+register_bits!(iou_ttc_apb_clk, ttc1_sel, u8, 2, 3);
+register_bits!(iou_ttc_apb_clk, ttc0_sel, u8, 0, 1);
 
 // Target-specific constants
 // (L3_SEL, L2_SEL, L1_SEL, L0_SEL)
