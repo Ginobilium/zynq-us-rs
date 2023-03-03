@@ -61,11 +61,11 @@ pub struct RegisterBlock {
     pub rst_fpd_apu: RstFpdApu,
     pub rst_ddr_ss: RstDdrSS,
 }
-register_at!(RegisterBlock, 0xFD1A_0000, slcr);
+register_at!(RegisterBlock, 0xFD1A_0000, crf_apb);
 
 impl Unlocked for RegisterBlock {
     fn unlocked<F: FnMut(&mut Self) -> R, R>(mut f: F) -> R {
-        let mut self_ = Self::slcr();
+        let mut self_ = Self::crf_apb();
         self_.crf_wprot.write(WProt::zeroed().active(false));
         let r = f(&mut self_);
         self_.crf_wprot.write(WProt::zeroed().active(true));

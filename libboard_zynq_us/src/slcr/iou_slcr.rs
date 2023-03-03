@@ -57,7 +57,7 @@ pub struct RegisterBlock {
     pub idr: WO<u32>,
     pub itr: WO<u32>,
 }
-register_at!(RegisterBlock, 0xFF18_0000, slcr);
+register_at!(RegisterBlock, 0xFF18_0000, iou_slcr);
 
 pub struct BankCSR {
     pub bank_drive_ctrl: [BankDriveCtrl; 2],
@@ -71,7 +71,7 @@ pub struct BankCSR {
 impl Unlocked for RegisterBlock {
     // Dummy definition for consistency
     fn unlocked<F: FnMut(&mut Self) -> R, R>(mut f: F) -> R {
-        let mut self_ = Self::slcr();
+        let mut self_ = Self::iou_slcr();
         f(&mut self_)
     }
 }

@@ -155,11 +155,11 @@ pub struct RegisterBlock {
     pub bank3_slew_ctrl: RW<u32>,
     pub bank3_status: RO<u32>,
 }
-register_at!(RegisterBlock, 0xFF5E_0000, slcr);
+register_at!(RegisterBlock, 0xFF5E_0000, crl_apb);
 
 impl Unlocked for RegisterBlock {
     fn unlocked<F: FnMut(&mut Self) -> R, R>(mut f: F) -> R {
-        let mut self_ = Self::slcr();
+        let mut self_ = Self::crl_apb();
         self_.crl_wprot.write(WProt::zeroed().active(false));
         let r = f(&mut self_);
         self_.crl_wprot.write(WProt::zeroed().active(true));
