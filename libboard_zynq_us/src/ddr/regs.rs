@@ -4,7 +4,7 @@ use volatile_register::{RO, RW};
 #[allow(unused)]
 #[repr(u8)]
 pub enum DeviceConfig {
-    X4 = 0b00,
+    Reserved = 0b00,
     X8 = 0b01,
     X16 = 0b10,
     X32 = 0b11,
@@ -44,11 +44,11 @@ pub struct RegisterBlock {
     unused3: [u32; 5],
     pub refresh_ctrl0: RefreshCtrl0,
     pub refresh_ctrl1: RefreshCtrl1,
-    unused4: [u32; 1],
+    unused4: [u32; 2],
     pub refresh_ctrl3: RefreshCtrl3,
     pub refresh_timing: RefreshTiming,
     unused5: [u32; 2],
-    pub ecc_cfg0: RW<u32>,
+    pub ecc_cfg0: EccCfg0,
     pub ecc_cfg1: RW<u32>,
     pub ecc_status: RO<u32>,
     pub ecc_clr: RW<u32>,
@@ -69,33 +69,33 @@ pub struct RegisterBlock {
     pub ecc_poison_addr0: RW<u32>,
     pub ecc_poison_addr1: RW<u32>,
     pub crc_par_ctrl0: RW<u32>,
-    pub crc_par_ctrl1: RW<u32>,
-    pub crc_par_ctrl2: RW<u32>,
+    pub crc_par_ctrl1: CrcParCtrl1,
+    pub crc_par_ctrl2: CrcParCtrl2,
     pub crc_par_status: RO<u32>,
-    pub init0: RW<u32>,
-    pub init1: RW<u32>,
-    pub init2: RW<u32>,
-    pub init3: RW<u32>,
-    pub init4: RW<u32>,
-    pub init5: RW<u32>,
-    pub init6: RW<u32>,
-    pub init7: RW<u32>,
-    pub dimm_ctrl: RW<u32>,
+    pub init0: Init0,
+    pub init1: Init1,
+    pub init2: Init2,
+    pub init3: Init3,
+    pub init4: Init4,
+    pub init5: Init5,
+    pub init6: Init6,
+    pub init7: Init7,
+    pub dimm_ctrl: DimmCtrl,
     pub rank_ctrl: RW<u32>,
     unused6: [u32; 2],
-    pub dram_tmg0: RW<u32>,
-    pub dram_tmg1: RW<u32>,
-    pub dram_tmg2: RW<u32>,
-    pub dram_tmg3: RW<u32>,
-    pub dram_tmg4: RW<u32>,
+    pub dram_tmg0: DramTmg0,
+    pub dram_tmg1: DramTmg1,
+    pub dram_tmg2: DramTmg2,
+    pub dram_tmg3: DramTmg3,
+    pub dram_tmg4: DramTmg4,
     pub dram_tmg5: RW<u32>,
     pub dram_tmg6: RW<u32>,
     pub dram_tmg7: RW<u32>,
-    pub dram_tmg8: RW<u32>,
-    pub dram_tmg9: RW<u32>,
+    pub dram_tmg8: DramTmg8,
+    pub dram_tmg9: DramTmg9,
     pub dram_tmg10: RW<u32>,
     pub dram_tmg11: RW<u32>,
-    pub dram_tmg12: RW<u32>,
+    pub dram_tmg12: DramTmg12,
     pub dram_tmg13: RW<u32>,
     pub dram_tmg14: RW<u32>,
     unused7: [u32; 17],
@@ -116,18 +116,18 @@ pub struct RegisterBlock {
     unused9: [u32; 2],
     pub dbi_ctrl: RW<u32>,
     unused10: [u32; 15],
-    pub addr_map0: RW<u32>,
-    pub addr_map1: RW<u32>,
-    pub addr_map2: RW<u32>,
-    pub addr_map3: RW<u32>,
-    pub addr_map4: RW<u32>,
-    pub addr_map5: RW<u32>,
-    pub addr_map6: RW<u32>,
-    pub addr_map7: RW<u32>,
-    pub addr_map8: RW<u32>,
-    pub addr_map9: RW<u32>,
-    pub addr_map10: RW<u32>,
-    pub addr_map11: RW<u32>,
+    pub addr_map0: AddrMap0,
+    pub addr_map1: AddrMap1,
+    pub addr_map2: AddrMap2,
+    pub addr_map3: AddrMap3,
+    pub addr_map4: AddrMap4,
+    pub addr_map5: AddrMap5,
+    pub addr_map6: AddrMap6,
+    pub addr_map7: AddrMap7,
+    pub addr_map8: AddrMap8,
+    pub addr_map9: AddrMap9,
+    pub addr_map10: AddrMap10,
+    pub addr_map11: AddrMap11,
     unused11: [u32; 4],
     pub odt_cfg: RW<u32>,
     pub odt_map: RW<u32>,
@@ -144,13 +144,14 @@ pub struct RegisterBlock {
     pub perf_vpr1: RW<u32>,
     pub perf_vpw1: RW<u32>,
     unused17: [u32; 1],
-    pub dq_map0: RW<u32>,
-    pub dq_map1: RW<u32>,
-    pub dq_map2: RW<u32>,
-    pub dq_map3: RW<u32>,
-    pub dq_map4: RW<u32>,
-    pub dq_map5: RW<u32>,
-    unused18: [u32; 3],
+    pub dq_map0: DqMap0,
+    pub dq_map1: DqMap1,
+    pub dq_map2: DqMap2,
+    pub dq_map3: DqMap3,
+    pub dq_map4: DqMap4,
+    pub dq_map5: DqMap5,
+    unused18: [u32; 26],
+    pub dbg0: RW<u32>,
     pub dbg1: RW<u32>,
     pub dbg_cam: RO<u32>,
     pub dbg_cmd: RW<u32>,
@@ -224,7 +225,7 @@ pub struct RegisterBlock {
     pub sar_size1: RW<u32>,
     unused34: [u32; 1092],
     pub derate_int_shadow: RW<u32>,
-    unused35: [u32; 2],
+    unused35: [u32; 10],
     pub refresh_ctrl0_shadow: RW<u32>,
     unused36: [u32; 4],
     pub refresh_timing_shadow: RW<u32>,
@@ -300,7 +301,7 @@ register_bits!(derate_interval, mr4_read_interval, u32, 0, 31);
 
 register!(power_ctrl, PowerCtrl, RW, u32);
 register_bit!(power_ctrl, stay_in_self_ref, 6);
-register_bit!(power_ctrl, sel_fref_sw, 5);
+register_bit!(power_ctrl, self_ref_sw, 5);
 register_bit!(power_ctrl, mpsm_en, 4);
 register_bit!(power_ctrl, en_dfi_dram_clk_disable, 3);
 register_bit!(power_ctrl, deep_powerdown_en, 2);
@@ -331,3 +332,198 @@ register!(refresh_timing, RefreshTiming, RW, u32);
 register_bits!(refresh_timing, t_rfc_nom_x32, u16, 16, 27);
 register_bit!(refresh_timing, lpddr3_trefbw_en, 15);
 register_bits!(refresh_timing, t_rfc_min, u16, 0, 9);
+
+register!(ecc_cfg0, EccCfg0, RW, u32);
+register_bit!(ecc_cfg0, dis_scrub, 4);
+register_bits!(ecc_cfg0, ecc_mode, u8, 0, 2);
+
+register!(crc_par_ctrl1, CrcParCtrl1, RW, u32);
+// TODO: other fields
+register_bit!(crc_par_ctrl1, crc_enable, 4);
+register_bit!(crc_par_ctrl1, parity_enable, 0);
+
+register!(crc_par_ctrl2, CrcParCtrl2, RW, u32);
+register_bits!(crc_par_ctrl2, t_par_alert_pw_max, u16, 16, 24);
+register_bits!(crc_par_ctrl2, t_crc_alert_pw_max, u8, 8, 12);
+register_bits!(crc_par_ctrl2, retry_fifo_max_hold_timer_x4, u8, 0, 5);
+
+register!(init0, Init0, RW, u32);
+register_bits!(init0, skip_dram_init, u8, 30, 31);
+register_bits!(init0, post_cke_x1024, u16, 16, 25);
+register_bits!(init0, pre_cke_x1024, u16, 0, 11);
+
+register!(init1, Init1, RW, u32);
+register_bits!(init1, dram_rstn_x1024, u16, 16, 24);
+register_bits!(init1, final_wait_x32, u8, 8, 14);
+register_bits!(init1, pre_ocd_x32, u8, 0, 3);
+
+register!(init2, Init2, RW, u32);
+register_bits!(init2, min_stable_clock_x1, u8, 0, 3);
+
+register!(init3, Init3, RW, u32);
+// DDR3/4: MR0
+// LPDDR3/4: MR1
+register_bits!(init3, mr, u16, 16, 31);
+// DDR3/4: MR1
+// Set bit 7 to 0.
+// LPDDR3/4: MR2
+register_bits!(init3, emr, u16, 0, 15);
+
+register!(init4, Init4, RW, u32);
+register_bits!(init4, emr2, u16, 16, 31);
+register_bits!(init4, emr3, u16, 0, 15);
+
+register!(init5, Init5, RW, u32);
+register_bits!(init5, dev_zqinit_x32, u8, 16, 23);
+register_bits!(init5, max_auto_init_x1024, u16, 0, 9);
+
+register!(init6, Init6, RW, u32);
+register_bits!(init6, mr4, u16, 16, 31);
+register_bits!(init6, mr5, u16, 0, 15);
+
+register!(init7, Init7, RW, u32);
+register_bits!(init7, mr6, u16, 16, 31);
+
+register!(dimm_ctrl, DimmCtrl, RW, u32);
+register_bit!(dimm_ctrl, dimm_dis_bg_mirroring, 5);
+register_bit!(dimm_ctrl, mrs_bg1_en, 4);
+register_bit!(dimm_ctrl, mrs_a17_en, 3);
+register_bit!(dimm_ctrl, dimm_output_inv_en, 2);
+register_bit!(dimm_ctrl, dimm_addr_mirr_en, 1);
+register_bit!(dimm_ctrl, dimm_stagger_cs_en, 0);
+
+register!(dram_tmg0, DramTmg0, RW, u32);
+register_bits!(dram_tmg0, wr2pre, u8, 24, 30);
+register_bits!(dram_tmg0, t_faw, u8, 16, 21);
+register_bits!(dram_tmg0, t_ras_max, u8, 8, 14);
+register_bits!(dram_tmg0, t_ras_min, u8, 0, 5);
+
+register!(dram_tmg1, DramTmg1, RW, u32);
+register_bits!(dram_tmg1, t_xp, u8, 16, 20);
+register_bits!(dram_tmg1, rd2pre, u8, 8, 12);
+register_bits!(dram_tmg1, t_rc, u8, 0, 6);
+
+register!(dram_tmg2, DramTmg2, RW, u32);
+register_bits!(dram_tmg2, write_latency, u8, 24, 29);
+register_bits!(dram_tmg2, read_latency, u8, 16, 21);
+register_bits!(dram_tmg2, rd2wr, u8, 8, 13);
+register_bits!(dram_tmg2, wr2rd, u8, 0, 5);
+
+register!(dram_tmg3, DramTmg3, RW, u32);
+register_bits!(dram_tmg3, t_mrw, u16, 20, 29);
+register_bits!(dram_tmg3, t_mrd, u8, 12, 17);
+register_bits!(dram_tmg3, t_mod, u16, 0, 9);
+
+register!(dram_tmg4, DramTmg4, RW, u32);
+register_bits!(dram_tmg4, t_rcd, u8, 24, 28);
+register_bits!(dram_tmg4, t_ccd, u8, 16, 19);
+register_bits!(dram_tmg4, t_rrd, u8, 8, 11);
+register_bits!(dram_tmg4, t_rp, u8, 0, 4);
+
+register!(dram_tmg8, DramTmg8, RW, u32);
+register_bits!(dram_tmg8, t_xs_fast_x32, u8, 24, 30);
+register_bits!(dram_tmg8, t_xs_abort_x32, u8, 16, 22);
+register_bits!(dram_tmg8, t_xs_dll_x32, u8, 8, 14);
+register_bits!(dram_tmg8, t_xs_x32, u8, 0, 6);
+
+register!(dram_tmg9, DramTmg9, RW, u32);
+register_bit!(dram_tmg9, ddr4_wr_preamble, 30);
+register_bits!(dram_tmg9, t_ccd_s, u8, 16, 18);
+register_bits!(dram_tmg9, t_rrd_s, u8, 8, 11);
+register_bits!(dram_tmg9, wr2rd_s, u8, 0, 5);
+
+register!(dram_tmg12, DramTmg12, RW, u32);
+register_bits!(dram_tmg12, t_cmdcke, u8, 16, 17);
+register_bits!(dram_tmg12, t_ckehcmd, u8, 8, 11);
+register_bits!(dram_tmg12, t_mrd_pda, u8, 0, 4);
+
+register!(addr_map0, AddrMap0, RW, u32);
+register_bits!(addr_map0, addrmap_cs_bit0, u8, 0, 4);
+
+register!(addr_map1, AddrMap1, RW, u32);
+register_bits!(addr_map1, addrmap_bank_b2, u8, 16, 20);
+register_bits!(addr_map1, addrmap_bank_b1, u8, 8, 12);
+register_bits!(addr_map1, addrmap_bank_b0, u8, 0, 4);
+
+register!(addr_map2, AddrMap2, RW, u32);
+register_bits!(addr_map2, addrmap_col_b5, u8, 24, 27);
+register_bits!(addr_map2, addrmap_col_b4, u8, 16, 19);
+register_bits!(addr_map2, addrmap_col_b3, u8, 8, 11);
+register_bits!(addr_map2, addrmap_col_b2, u8, 0, 3);
+
+register!(addr_map3, AddrMap3, RW, u32);
+register_bits!(addr_map3, addrmap_col_b9, u8, 24, 27);
+register_bits!(addr_map3, addrmap_col_b8, u8, 16, 19);
+register_bits!(addr_map3, addrmap_col_b7, u8, 8, 11);
+register_bits!(addr_map3, addrmap_col_b6, u8, 0, 3);
+
+register!(addr_map4, AddrMap4, RW, u32);
+register_bits!(addr_map4, addrmap_col_b11, u8, 8, 11);
+register_bits!(addr_map4, addrmap_col_b10, u8, 0, 3);
+
+register!(addr_map5, AddrMap5, RW, u32);
+register_bits!(addr_map5, addrmap_row_b11, u8, 24, 27);
+register_bits!(addr_map5, addrmap_row_b2_10, u8, 16, 19);
+register_bits!(addr_map5, addrmap_row_b1, u8, 8, 11);
+register_bits!(addr_map5, addrmap_row_b0, u8, 0, 3);
+
+register!(addr_map6, AddrMap6, RW, u32);
+register_bit!(addr_map6, lpddr3_6gb_12gb, 31);
+register_bits!(addr_map6, addrmap_row_b15, u8, 24, 27);
+register_bits!(addr_map6, addrmap_row_b14, u8, 16, 19);
+register_bits!(addr_map6, addrmap_row_b13, u8, 8, 11);
+register_bits!(addr_map6, addrmap_row_b12, u8, 0, 3);
+
+register!(addr_map7, AddrMap7, RW, u32);
+register_bits!(addr_map7, addrmap_row_b17, u8, 8, 11);
+register_bits!(addr_map7, addrmap_row_b16, u8, 0, 3);
+
+register!(addr_map8, AddrMap8, RW, u32);
+register_bits!(addr_map8, addrmap_bg_b1, u8, 8, 12);
+register_bits!(addr_map8, addrmap_bg_b0, u8, 0, 4);
+
+register!(addr_map9, AddrMap9, RW, u32);
+register_bits!(addr_map9, addrmap_row_b5, u8, 24, 27);
+register_bits!(addr_map9, addrmap_row_b4, u8, 16, 19);
+register_bits!(addr_map9, addrmap_row_b3, u8, 8, 11);
+register_bits!(addr_map9, addrmap_row_b2, u8, 0, 3);
+
+register!(addr_map10, AddrMap10, RW, u32);
+register_bits!(addr_map10, addrmap_row_b9, u8, 24, 27);
+register_bits!(addr_map10, addrmap_row_b8, u8, 16, 19);
+register_bits!(addr_map10, addrmap_row_b7, u8, 8, 11);
+register_bits!(addr_map10, addrmap_row_b6, u8, 0, 3);
+
+register!(addr_map11, AddrMap11, RW, u32);
+register_bits!(addr_map11, addrmap_row_b10, u8, 0, 3);
+
+register!(dq_map0, DqMap0, RW, u32);
+register_bits!(dq_map0, dq_nibble_map_12_15, u8, 24, 31);
+register_bits!(dq_map0, dq_nibble_map_8_11, u8, 16, 23);
+register_bits!(dq_map0, dq_nibble_map_4_7, u8, 8, 15);
+register_bits!(dq_map0, dq_nibble_map_0_3, u8, 0, 7);
+
+register!(dq_map1, DqMap1, RW, u32);
+register_bits!(dq_map1, dq_nibble_map_28_31, u8, 24, 31);
+register_bits!(dq_map1, dq_nibble_map_24_27, u8, 16, 23);
+register_bits!(dq_map1, dq_nibble_map_20_23, u8, 8, 15);
+register_bits!(dq_map1, dq_nibble_map_16_19, u8, 0, 7);
+
+register!(dq_map2, DqMap2, RW, u32);
+register_bits!(dq_map2, dq_nibble_map_44_47, u8, 24, 31);
+register_bits!(dq_map2, dq_nibble_map_40_43, u8, 16, 23);
+register_bits!(dq_map2, dq_nibble_map_36_39, u8, 8, 15);
+register_bits!(dq_map2, dq_nibble_map_32_35, u8, 0, 7);
+
+register!(dq_map3, DqMap3, RW, u32);
+register_bits!(dq_map3, dq_nibble_map_60_63, u8, 24, 31);
+register_bits!(dq_map3, dq_nibble_map_56_59, u8, 16, 23);
+register_bits!(dq_map3, dq_nibble_map_52_55, u8, 8, 15);
+register_bits!(dq_map3, dq_nibble_map_48_51, u8, 0, 7);
+
+register!(dq_map4, DqMap4, RW, u32);
+register_bits!(dq_map4, dq_nibble_map_cb_4_7, u8, 8, 15);
+register_bits!(dq_map4, dq_nibble_map_cb_0_3, u8, 0, 7);
+
+register!(dq_map5, DqMap5, RW, u32);
+register_bit!(dq_map5, dis_dq_rank_swap, 0);
